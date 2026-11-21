@@ -470,7 +470,7 @@ function matchForm(t,m){
   <label for="f-opp">Modstander</label><select id="f-opp">${opts.map(c=>`<option value="${c.id}" ${m.opp===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}<option value="__new">+ Ny klub…</option></select>
   <div id="newc" style="display:none"><label for="f-newc">Ny klubs navn</label><input id="f-newc"></div>
   <label for="f-when">Dato og tid</label><input type="datetime-local" id="f-when" value="${m.when||''}">
-  <label for="f-field">Bane</label><input id="f-field" value="${esc(m.field||'')}" placeholder="F.eks. Bane 3">`,()=>{
+  <label for="f-field">${t.type==='inde'?'Hal':'Bane'}</label><input id="f-field" value="${esc(m.field||'')}" placeholder="${t.type==='inde'?'F.eks. Hal 2':'F.eks. Bane 3'}">`,()=>{
     let opp=val('f-opp');
     if(opp==='__new'){const nm=val('f-newc');if(!nm){$('f-newc').focus();return false}opp=newClubRec(nm).id}
     const d={opp,when:val('f-when'),field:val('f-field')};
