@@ -32,6 +32,8 @@ header.top h1{font:800 34px/1.05 'Barlow Condensed',sans-serif;margin:0;flex:1;t
 .tabs{display:flex;gap:8px;margin:14px 0 4px}
 .tab{flex:1;min-height:44px;border:1px solid var(--line);background:var(--card);border-radius:12px;font-weight:600;cursor:pointer}
 .tab.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.tab .n{display:inline-block;min-width:24px;margin-left:6px;padding:0 7px;border-radius:99px;font-size:13px;background:light-dark(#e4efe7,#1d3a2a);color:var(--ink)}.tab.on .n{background:rgba(255,255,255,.22);color:#fff}
+.yr{padding:8px 12px;font:700 20px 'Barlow Condensed',sans-serif;background:var(--bg);border-bottom:1px solid var(--line);letter-spacing:.5px}
 h2{font:700 24px/1.1 'Barlow Condensed',sans-serif;margin:26px 0 10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -99,9 +101,9 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.6 */
+/* Kampdag v0.1.7 */
 {
-const VERSION='0.1.6';
+const VERSION='0.1.7';
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -236,15 +238,16 @@ window.addEventListener('online',()=>sync());
 
 /* ---------- visning ---------- */
 let view={v:'home'};
+let tList=LS.get('fb_tlist','up');
 const app=$('app'),modal=$('modal'),sheet=$('sheet');
 function go(v){view=v;render();window.scrollTo(0,0)}
 function head(title,back){return`<header class="top"><div class="in">${back?`<button class="back" data-a="back" aria-label="Tilbage">‹</button>`:''}<h1>${title}</h1>${VIEWER?'<span class="scope">Følg med</span>':''}<span class="gearwrap"><button class="gear" data-a="settings" aria-label="Vejledning og indstillinger">${gearSvg}</button><span class="ver">v${VERSION}</span></span></div></header>`}
 const lockOf=t=>!VIEWER&&t&&matchesOf(t.id).find(m=>m.status==='live'&&m.by&&m.by!==ME);
 /* delt link: fjern alle knapper der ændrer noget */
-const READ_OK=new Set(['back','home','clubs','sync','open-match','open-tour','settings']);
+const READ_OK=new Set(['back','home','tlist','clubs','sync','open-match','open-tour','settings']);
 function applyViewer(){if(!VIEWER)return;app.querySelectorAll('[data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});app.querySelectorAll('[data-a]').forEach(b=>{if(!READ_OK.has(b.dataset.a))b.remove()});app.querySelectorAll('input').forEach(i=>i.disabled=true);app.querySelectorAll('.ctrl,.cardbtns').forEach(x=>x.remove());
   app.querySelectorAll('.list .item[data-a=edit-club]').forEach(x=>x.removeAttribute('data-a'))}
-const VIEW_OK=new Set(['back','home','clubs','settings','sync','open-match','open-tour','takeover']);
+const VIEW_OK=new Set(['back','home','tlist','clubs','settings','sync','open-match','open-tour','takeover']);
 function applyLock(t){
   const L=lockOf(t);if(!L)return;
   app.querySelectorAll('.wrap [data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});
@@ -288,15 +291,22 @@ function renderHome(){
   const live=ms.filter(m=>m.status==='live');
   const next=live.length?null:ms.filter(m=>m.status==='plan'&&m.when>=new Date(Date.now()-3*3600e3).toISOString().slice(0,16)).sort((a,b)=>a.when.localeCompare(b.when))[0];
   const show=live.length?live:next?[next]:[];
-  const sorted=[...ts].sort((a,b)=>(b.from||'').localeCompare(a.from||''));
+  /* kommende (også dem der er i gang i dag) står med det nærmeste først; afsluttede med det nyeste først. Delt ved årsskifte. */
+  const today=new Date().toLocaleDateString('sv-SE'),endOf=t=>t.to||t.from||'';
+  const isDone=t=>!!endOf(t)&&endOf(t)<today;
+  const upc=ts.filter(t=>!isDone(t)).sort((a,b)=>(a.from||'9999').localeCompare(b.from||'9999')||a.name.localeCompare(b.name,'da'));
+  const done=ts.filter(isDone).sort((a,b)=>endOf(b).localeCompare(endOf(a))||(b.from||'').localeCompare(a.from||''));
+  const sorted=tList==='done'?done:upc;let lastYr=null;
+  const yrHead=t=>{const y=(t.from||'').slice(0,4)||'Uden dato';if(y===lastYr)return'';lastYr=y;return`<div class="yr">${y}</div>`};
   app.innerHTML=head('Kampdag')+`<div class="wrap">${tabs('home')}
   ${!ownId()&&!VIEWER?`<div class="card"><b>Start med jeres egen klub</b><p class="mut" style="margin:4px 0 10px">Opret klubben, og sæt flueben i "Det er vores klub".</p><button class="btn pri" data-a="new-club" data-own="1">+ Opret vores klub</button></div>`:''}
   ${show.map(m=>`<h2>${m.status==='live'?'I gang nu':'Næste kamp'}</h2><div data-a="open-match" data-t="${m.tour}" data-m="${m.id}" style="cursor:pointer">${board(tour(m.tour),m)}</div>`).join('')}
   <div class="row" style="margin-top:8px"><h2 class="grow">Stævner</h2><button class="btn pri" data-a="new-tour">+ Nyt stævne</button></div>
-  <div class="card list" style="padding:0">${sorted.length?sorted.map(t=>{const tm=matchesOf(t.id),r=record(tm);return`<div class="item" data-a="open-tour" data-t="${t.id}">
+  <div class="tabs" style="margin-top:4px"><button class="tab ${tList==='done'?'':'on'}" data-a="tlist" data-l="up">Kommende stævner<span class="n">${upc.length}</span></button><button class="tab ${tList==='done'?'on':''}" data-a="tlist" data-l="done">Afsluttede stævner<span class="n">${done.length}</span></button></div>
+  <div class="card list" style="padding:0">${sorted.length?sorted.map(t=>{const tm=matchesOf(t.id),r=record(tm);return yrHead(t)+`<div class="item" data-a="open-tour" data-t="${t.id}">
    <div class="grow"><div style="font-weight:600">${esc(t.name)}</div><div class="mut">${dateRange(t)}${t.place?' · '+esc(t.place):''} · ${tm.length} kampe</div>
    <div style="margin-top:4px"><span class="chip ${t.type}">${typeTxt[t.type]||''}</span> ${t.team?`<span class="chip">${esc(t.team)}</span>`:''} ${t.player?`<span class="chip">🏆 ${esc(t.player)}</span>`:''}</div></div>
-   <div style="text-align:right"><div class="score" style="font-size:20px">${r.w}-${r.d}-${r.l}</div><div class="mut">V-U-T</div></div></div>`}).join(''):'<div class="empty">Ingen stævner endnu</div>'}</div>
+   <div style="text-align:right"><div class="score" style="font-size:20px">${r.w}-${r.d}-${r.l}</div><div class="mut">V-U-T</div></div></div>`}).join(''):`<div class="empty">${tList==='done'?'Ingen afsluttede stævner endnu':'Ingen kommende stævner – tryk "+ Nyt stævne"'}</div>`}</div>
   ${syncLine()}</div>`;
 }
 function renderTour(){
@@ -430,10 +440,10 @@ async function pictureSheet(t){
 const HELP_VIEW=[
  ['Hvad er det her?','Du følger stævner og kampe live via et link, du har fået. Du kan kun kigge med, ikke rette noget.'],
  ['Stillingen','Siden opdaterer sig selv hvert par sekunder. Øverst på forsiden står kampen, der er i gang lige nu, eller den næste kamp.'],
- ['Stævner og kampe','Tryk på et stævne for at se alle dets kampe og resultater. Tryk på en kamp for at se mål og kort med kampminut.'],
+ ['Stævner og kampe','Vælg "Kommende stævner" eller "Afsluttede stævner". Tryk på et stævne for at se alle dets kampe og resultater. Tryk på en kamp for at se mål og kort med kampminut.'],
  ['Gem på hjemmeskærmen','På iPhone: tryk Del i Safari og vælg "Føj til hjemmeskærm", så har du linket ved hånden.']];
 const HELP_USER=[
- ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Samme hold kan ikke spille to stævner på samme tid.'],
+ ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Forsiden har to knapper: "Kommende stævner" (det nærmeste først) og "Afsluttede stævner" (det nyeste først), delt op efter år. Samme hold kan ikke spille to stævner på samme tid.'],
  ['Klubber og logoer','Under Klubber opretter du klubberne. Logoet kan vælges som et billede fra telefonen eller hentes ved at indsætte et link til billedet eller til klubbens hjemmeside. Sæt flueben ved "Det er vores klub" på jeres egen klub.'],
  ['Under kampen','Tryk "Start kamp". Brug de store knapper "+ MÅL" og knapperne til gult og rødt kort for hvert hold. Kampminuttet gemmes automatisk. Tryk på minuttet ud for et mål, hvis det skal rettes, fx når et mål skrives ind bagefter. "Fortryd sidste" fjerner den seneste registrering.'],
  ['Flere telefoner','Trykker to telefoner mål til samme hold inden for 10 sekunder, tæller det som ét mål. Flere mål fra den samme telefon tæller altid hver for sig.'],
@@ -563,6 +573,7 @@ app.addEventListener('click',e=>{
    case 'picture':return OWNER?pictureSheet(t):null;
    case 'home':return go({v:'home'});
    case 'clubs':return go({v:'clubs'});
+   case 'tlist':tList=el.dataset.l==='done'?'done':'up';LS.set('fb_tlist',tList);return render();
    case 'back':return go(view.v==='match'?{v:'tour',t:view.t}:{v:'home'});
    case 'open-tour':return go({v:'tour',t:el.dataset.t});
    case 'open-match':return go({v:'match',t:el.dataset.t,m:el.dataset.m});
