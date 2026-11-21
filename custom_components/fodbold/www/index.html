@@ -98,8 +98,9 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.3 */
+/* Kampdag v0.1.4 */
 {
+const VERSION='0.1.4';
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -452,7 +453,8 @@ async function settingsSheet(load=true){
   if(!OWNER||VIEWER){
     sheet.innerHTML=`<h3>Sådan bruges Kampdag</h3>${helpHtml(VIEWER?HELP_VIEW:HELP_USER)}
     ${VIEWER?'':`<p class="mut" style="margin-top:14px">Logget ind som <b>${esc(ME)}</b>.</p>`}
-    <div class="row" style="margin-top:12px"><button class="btn pri grow" data-x="close">Luk</button></div>`;
+    <div class="row" style="margin-top:12px"><button class="btn pri grow" data-x="close">Luk</button></div>
+    <p class="mut" style="text-align:center;margin:14px 0 0">Kampdag version ${VERSION}</p>`;
     modal.classList.add('open');sheet.onclick=e=>{if(e.target.closest('[data-x]'))closeSheet()};return;
   }
   sheet.innerHTML=`<h3>Sådan bruges Kampdag</h3>${helpHtml(HELP_USER.concat(HELP_OWNER))}
@@ -470,7 +472,8 @@ async function settingsSheet(load=true){
    <p class="mut">Nyt link eller stop deling gør det gamle link ugyldigt.</p>`
   :`<button class="btn pri" style="width:100%" data-x="new">${load?'Henter …':'Lav delelink'}</button><div id="sharemsg" class="err"></div>`}
   <p class="mut" style="margin-top:16px">Logget ind som <b>${esc(ME)}</b>. Deling og Facebook-billede er kun på din bruger.</p>
-  <div class="row" style="margin-top:12px"><button class="btn grow" data-x="close">Luk</button></div>`;
+  <div class="row" style="margin-top:12px"><button class="btn grow" data-x="close">Luk</button></div>
+  <p class="mut" style="text-align:center;margin:14px 0 0">Kampdag version ${VERSION}</p>`;
   modal.classList.add('open');
   const msg=t=>{const m=$('sharemsg');if(m)m.textContent=t};
   const call=async(method)=>{try{const r=await api('del',{method});const j=await r.json();if(!r.ok)throw new Error(j.message||'Fejl');shareTok=j.token;settingsSheet(false)}catch(e){msg(e.login?'Ikke logget ind':'Kunne ikke kontakte Home Assistant')}};
