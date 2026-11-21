@@ -17,7 +17,7 @@ from pathlib import Path
 
 _LOGGER = logging.getLogger(__name__)
 _ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,120}$")
-KINDS = {"club", "settings", "tour", "match", "event"}
+KINDS = {"club", "settings", "tour", "match", "event", "team"}
 
 
 class Store:

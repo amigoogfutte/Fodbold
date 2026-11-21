@@ -101,9 +101,9 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.9 */
+/* Kampdag v0.1.10 */
 {
-const VERSION='0.1.9';
+const VERSION='0.1.10';
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -129,6 +129,9 @@ const settings=()=>{const s=S.records.settings;return s&&!s.deleted?s:{id:'setti
 const ownId=()=>settings().own;
 const club=id=>{const c=S.records[id];return c&&!c.deleted&&c.kind==='club'?c:{id:'',name:'Ukendt klub',color:'#777',logo:''}};
 const tour=id=>{const t=S.records[id];return t&&!t.deleted&&t.kind==='tour'?t:null};
+const nTeam=x=>String(x||'').trim().toLowerCase();
+/* vores hold: egne poster + navne der allerede står på stævner */
+const teamNames=()=>{const m=new Map();for(const x of all('team'))m.set(nTeam(x.name),x.name);for(const t of all('tour'))if(t.team&&!m.has(nTeam(t.team)))m.set(nTeam(t.team),t.team);return[...m.values()].sort((a,b)=>a.localeCompare(b,'da',{numeric:true}))};
 const matchesOf=tid=>all('match').filter(m=>m.tour===tid);
 const matchById=id=>{const m=S.records[id];return m&&!m.deleted&&m.kind==='match'?m:null};
 /* Samme mål/kort på FORSKELLIGE telefoner inden for 10 sek = samme hændelse. På samme telefon tæller de altid hver for sig.
@@ -245,8 +248,7 @@ function head(title,back){return`<header class="top"><div class="in">${back?`<bu
 const lockOf=t=>!VIEWER&&t&&matchesOf(t.id).find(m=>m.status==='live'&&m.by&&m.by!==ME);
 /* delt link: fjern alle knapper der ændrer noget */
 const READ_OK=new Set(['back','home','tlist','clubs','sync','open-match','open-tour','settings']);
-function applyViewer(){if(!VIEWER)return;app.querySelectorAll('[data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});app.querySelectorAll('[data-a]').forEach(b=>{if(!READ_OK.has(b.dataset.a))b.remove()});app.querySelectorAll('input').forEach(i=>i.disabled=true);app.querySelectorAll('.ctrl,.cardbtns').forEach(x=>x.remove());
-  app.querySelectorAll('.list .item[data-a=edit-club]').forEach(x=>x.removeAttribute('data-a'))}
+function applyViewer(){if(!VIEWER)return;app.querySelectorAll('.list .item[data-a=edit-club],.list .item[data-a=edit-team]').forEach(x=>x.removeAttribute('data-a'));app.querySelectorAll('[data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});app.querySelectorAll('[data-a]').forEach(b=>{if(!READ_OK.has(b.dataset.a))b.remove()});app.querySelectorAll('input').forEach(i=>i.disabled=true);app.querySelectorAll('.ctrl,.cardbtns').forEach(x=>x.remove())}
 const VIEW_OK=new Set(['back','home','tlist','clubs','settings','sync','open-match','open-tour','takeover']);
 function applyLock(t){
   const L=lockOf(t);if(!L)return;
@@ -275,7 +277,7 @@ function renderName(){
   <div class="card"><label for="f-me" style="margin-top:0">Dit navn</label><input id="f-me" placeholder="F.eks. Jesper">
   <button class="btn pri" style="width:100%;margin-top:14px" data-a="setname">Fortsæt</button></div></div>`;
 }
-function tabs(on){return`<div class="tabs"><button class="tab ${on==='home'?'on':''}" data-a="home">Stævner</button><button class="tab ${on==='clubs'?'on':''}" data-a="clubs">Klubber</button></div>`}
+function tabs(on){return`<div class="tabs"><button class="tab ${on==='home'?'on':''}" data-a="home">Stævner</button><button class="tab ${on==='clubs'?'on':''}" data-a="clubs">Hold og klubber</button></div>`}
 function board(t,m){
   const own=club(ownId()),opp=club(m.opp),[a,b]=score(m),evs=eventsOf(m.id);
   const cards=side=>evs.filter(e=>e.t!=='goal'&&e.side===side).map(e=>cardIcon(e.t)).join('');
@@ -351,8 +353,10 @@ function renderMatch(){
   ${syncLine()}</div>`;
 }
 function renderClubs(){
-  const own=ownId(),cs=all('club').sort((a,b)=>(b.id===own)-(a.id===own)||a.name.localeCompare(b.name,'da'));
-  app.innerHTML=head('Klubber')+`<div class="wrap">${tabs('clubs')}
+  const tns=teamNames(),own=ownId(),cs=all('club').sort((a,b)=>(b.id===own)-(a.id===own)||a.name.localeCompare(b.name,'da'));
+  app.innerHTML=head('Hold og klubber')+`<div class="wrap">${tabs('clubs')}
+  <div class="row"><h2 class="grow">Vores hold</h2><button class="btn pri" data-a="new-team">+ Nyt hold</button></div>
+  <div class="card list" style="padding:0">${tns.length?tns.map(n=>`<div class="item" data-a="edit-team" data-n="${esc(n)}">${logo(club(own))}<div class="grow" style="font-weight:600">${esc(n)}</div><span class="mut">${all('tour').filter(t=>nTeam(t.team)===nTeam(n)).length} stævner/kampe</span></div>`).join(''):'<div class="empty">Ingen hold endnu – fx "U11 piger"</div>'}</div>
   <div class="row"><h2 class="grow">${cs.length} klubber</h2><button class="btn pri" data-a="new-club">+ Ny klub</button></div>
   <div class="card list" style="padding:0">${cs.length?cs.map(c=>`<div class="item" data-a="edit-club" data-c="${c.id}">${logo(c)}<div class="grow" style="font-weight:600">${esc(c.name)}</div>${c.id===own?'<span class="chip">Vores klub</span>':''}${c.logo?'':'<span class="mut">+ logo</span>'}</div>`).join(''):'<div class="empty">Ingen klubber endnu</div>'}</div>
   ${syncLine()}</div>`;
@@ -448,7 +452,7 @@ const HELP_VIEW=[
  ['Gem på hjemmeskærmen','På iPhone: tryk Del i Safari og vælg "Føj til hjemmeskærm", så har du linket ved hånden.']];
 const HELP_USER=[
  ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Forsiden har to knapper: "Kommende stævner" (det nærmeste først) og "Afsluttede stævner" (det nyeste først), delt op efter år. Samme hold kan ikke spille to stævner på samme tid. Er det bare én kamp, så sæt flueben i "Kamp" og vælg modstanderen – så skrives navnet selv, fx "Kamp: Langeskov mod Dalum", og kampen bliver lagt ind med bane eller hal. Inde på en kamp viser tallene hele årets kampe for holdet – også stævnerne. Inde på et stævne tæller kun stævnets egne kampe.'],
- ['Klubber og logoer','Under Klubber opretter du klubberne. Logoet kan vælges som et billede fra telefonen eller hentes ved at indsætte et link til billedet eller til klubbens hjemmeside. Sæt flueben ved "Det er vores klub" på jeres egen klub.'],
+ ['Hold og klubber','Under "Hold og klubber" opretter du jeres egne hold (fx U11 piger) og de andre klubber. Når du laver et stævne eller en kamp, vælger du bare holdet på listen. Klubberne opretter du også her. Logoet kan vælges som et billede fra telefonen eller hentes ved at indsætte et link til billedet eller til klubbens hjemmeside. Sæt flueben ved "Det er vores klub" på jeres egen klub.'],
  ['Under kampen','Tryk "Start kamp". Brug de store knapper "+ MÅL" og knapperne til gult og rødt kort for hvert hold. Kampminuttet gemmes automatisk. Tryk på minuttet ud for et mål, hvis det skal rettes, fx når et mål skrives ind bagefter. "Fortryd sidste" fjerner den seneste registrering.'],
  ['Flere telefoner','Trykker to telefoner mål til samme hold inden for 10 sekunder, tæller det som ét mål. Flere mål fra den samme telefon tæller altid hver for sig.'],
  ['Hvem styrer','Den, der starter en kamp, styrer stævnet live. De andre kan kun kigge med på det stævne, men kan godt styre et andet stævne. Er telefonen løbet tør for strøm, kan en anden trykke "Overtag". Samme hold kan kun have én kamp i gang ad gangen.'],
@@ -519,16 +523,21 @@ function tourForm(t){
   <label for="f-type">Type</label><select id="f-type">${Object.entries(typeTxt).map(([k,v])=>`<option value="${k}" ${t.type===k?'selected':''}>${v}</option>`).join('')}</select>
   <label for="f-place">Sted</label><input id="f-place" value="${esc(t.place)}">
   <div class="row"><div class="grow"><label for="f-from" id="l-from">Fra</label><input type="date" id="f-from" value="${t.from||''}"></div><div class="grow" id="w-to"><label for="f-to">Til</label><input type="date" id="f-to" value="${t.to||t.from||''}"></div><div class="grow" id="w-time" style="display:none"><label for="f-time">Kl.</label><input type="time" id="f-time" value="${curTime}"></div></div>
-  <label for="f-team">Hold</label><input id="f-team" value="${esc(t.team||'')}" placeholder="F.eks. U11 piger">
+  <label for="f-teamsel">Hold</label><select id="f-teamsel">${(()=>{const tn=teamNames();const cur=n?(tn.find(x=>nTeam(x)===nTeam(LS.get('fb_lastteam','')))||(tn.length===1?tn[0]:'')):t.team||'';
+    if(cur&&!tn.some(x=>nTeam(x)===nTeam(cur)))tn.push(cur);
+    return`<option value="">Vælg hold…</option>${tn.map(x=>`<option value="${esc(x)}" ${nTeam(x)===nTeam(cur)?'selected':''}>${esc(x)}</option>`).join('')}<option value="__new">+ Nyt hold…</option>`})()}</select>
+  <div id="newteam" style="display:none"><label for="f-team">Nyt holds navn</label><input id="f-team" placeholder="F.eks. U11 piger"></div>
   <div id="f-err" class="err" role="alert"></div>`,()=>{
     const single=$('f-single').checked;
+    let team=val('f-teamsel');if(team==='__new'){team=val('f-team');if(!team){$('f-team').focus();return false}}
+    if(team){teamRec(team);LS.set('fb_lastteam',team)}
     let opp='';
     if(single){opp=val('f-sopp');
       if(opp==='__new'){const nm=val('f-snewc');if(!nm){$('f-snewc').focus();return false}opp=newClubRec(nm).id}
       if(!opp){$('f-err').textContent='Vælg en modstander.';$('f-sopp').focus();return false}
       if(!val('f-name')||autoName)$('f-name').value=kampName(opp)}
     const name=val('f-name');if(!name){$('f-name').focus();return false}
-    const d={name,type:val('f-type'),place:val('f-place'),from:val('f-from'),to:single?val('f-from'):(val('f-to')||val('f-from')),team:val('f-team'),single,opp:single?opp:''};
+    const d={name,type:val('f-type'),place:val('f-place'),from:val('f-from'),to:single?val('f-from'):(val('f-to')||val('f-from')),team,single,opp:single?opp:''};
     if(single&&d.type==='flere')d.type='ude';
     if(d.from&&d.to<d.from){$('f-err').textContent='"Til" kan ikke være før "Fra".';return false}
     /* samme hold kan ikke spille to stævner på samme tid (en enkelt kamp tjekkes ikke – der kan være flere samme dag) */
@@ -555,7 +564,23 @@ function tourForm(t){
     nm.placeholder=on?'Skrives selv, når du vælger modstander':'F.eks. Vildbjerg Cup';fill()};
   cb.addEventListener('change',()=>{if(cb.checked&&!nm.value.trim())autoName=true;sh()});
   so.addEventListener('change',sh);
+  const ts=$('f-teamsel'),tsh=()=>{$('newteam').style.display=ts.value==='__new'?'block':'none';if(ts.value==='__new')$('f-team').focus()};ts.addEventListener('change',tsh);if(!teamNames().length)ts.value='__new';tsh();
   $('f-type').addEventListener('change',()=>{const i=$('f-type').value==='inde';$('l-sfield').textContent=i?'Hal':'Bane';$('f-sfield').placeholder=i?'F.eks. Hal 2':'F.eks. Bane 3'});$('f-snewc').addEventListener('input',fill);sh();
+}
+function teamRec(name){const n=nTeam(name);return all('team').find(x=>nTeam(x.name)===n)||put({id:uid(),kind:'team',name:String(name).trim()})}
+function teamForm(old){
+  const n=!old,rec=old?all('team').find(x=>nTeam(x.name)===nTeam(old)):null,used=old?all('tour').filter(t=>nTeam(t.team)===nTeam(old)).length:0;
+  openSheet(`<h3>${n?'Nyt hold':'Ret hold'}</h3>
+  <label for="f-tname">Navn</label><input id="f-tname" value="${esc(old||'')}" placeholder="F.eks. U11 piger">
+  ${!n?(used?`<p class="mut">Holdet står på ${used} stævner/kampe. Retter du navnet, rettes det også dér.</p>`:'<button class="btn del" id="rmteam" style="margin-top:12px">Slet hold</button>'):''}
+  <div id="f-err" class="err" role="alert"></div>`,()=>{
+    const name=val('f-tname');if(!name){$('f-tname').focus();return false}
+    if(nTeam(name)!==nTeam(old)&&teamNames().some(x=>nTeam(x)===nTeam(name))){$('f-err').textContent='Det hold findes allerede.';return false}
+    if(n){teamRec(name);return}
+    if(rec)put({...rec,name});else teamRec(name);
+    for(const t of all('tour'))if(nTeam(t.team)===nTeam(old)&&t.team!==name)put({...t,team:name});
+  });
+  const rm=$('rmteam');if(rm)rm.onclick=()=>{if(rec)del(rec.id);closeSheet()};
 }
 function newClubRec(name){return put({id:uid(),kind:'club',name,logo:'',color:COLORS[all('club').length%COLORS.length]})}
 function matchForm(t,m){
@@ -646,6 +671,8 @@ app.addEventListener('click',e=>{
      return ask(`Overtag styringen fra ${esc(L.by)}?`,`Brug det fx hvis ${esc(L.by)}s telefon er løbet tør for strøm. ${esc(L.by)} kan derefter kun kigge med.`,'Overtag',()=>put({...L,by:ME}))}
    case 'new-club':return clubForm(null,el.dataset.own==='1'||!ownId());
    case 'edit-club':return clubForm(club(el.dataset.c));
+   case 'new-team':return teamForm();
+   case 'edit-team':return teamForm(el.dataset.n);
   }
 });
 setInterval(()=>{const m=matchById(view.m);const c=$('clock');if(view.v==='match'&&m&&m.status==='live'&&c)c.textContent=`${curMin(m)}. minut${m.by?' · '+m.by:''}${m.field?' · '+m.field:''}`},15000);
