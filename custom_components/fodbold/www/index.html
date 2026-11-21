@@ -99,9 +99,9 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.5 */
+/* Kampdag v0.1.6 */
 {
-const VERSION='0.1.5';
+const VERSION='0.1.6';
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -433,7 +433,7 @@ const HELP_VIEW=[
  ['Stævner og kampe','Tryk på et stævne for at se alle dets kampe og resultater. Tryk på en kamp for at se mål og kort med kampminut.'],
  ['Gem på hjemmeskærmen','På iPhone: tryk Del i Safari og vælg "Føj til hjemmeskærm", så har du linket ved hånden.']];
 const HELP_USER=[
- ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs.'],
+ ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Samme hold kan ikke spille to stævner på samme tid.'],
  ['Klubber og logoer','Under Klubber opretter du klubberne. Logoet kan vælges som et billede fra telefonen eller hentes ved at indsætte et link til billedet eller til klubbens hjemmeside. Sæt flueben ved "Det er vores klub" på jeres egen klub.'],
  ['Under kampen','Tryk "Start kamp". Brug de store knapper "+ MÅL" og knapperne til gult og rødt kort for hvert hold. Kampminuttet gemmes automatisk. Tryk på minuttet ud for et mål, hvis det skal rettes, fx når et mål skrives ind bagefter. "Fortryd sidste" fjerner den seneste registrering.'],
  ['Flere telefoner','Trykker to telefoner mål til samme hold inden for 10 sekunder, tæller det som ét mål. Flere mål fra den samme telefon tæller altid hver for sig.'],
@@ -495,9 +495,15 @@ function tourForm(t){
   <label for="f-type">Type</label><select id="f-type">${Object.entries(typeTxt).map(([k,v])=>`<option value="${k}" ${t.type===k?'selected':''}>${v}</option>`).join('')}</select>
   <label for="f-place">Sted</label><input id="f-place" value="${esc(t.place)}">
   <div class="row"><div class="grow"><label for="f-from">Fra</label><input type="date" id="f-from" value="${t.from||''}"></div><div class="grow"><label for="f-to">Til</label><input type="date" id="f-to" value="${t.to||t.from||''}"></div></div>
-  <label for="f-team">Hold</label><input id="f-team" value="${esc(t.team||'')}" placeholder="F.eks. U11 piger">`,()=>{
+  <label for="f-team">Hold</label><input id="f-team" value="${esc(t.team||'')}" placeholder="F.eks. U11 piger">
+  <div id="f-err" class="err" role="alert"></div>`,()=>{
     const name=val('f-name');if(!name){$('f-name').focus();return false}
     const d={name,type:val('f-type'),place:val('f-place'),from:val('f-from'),to:val('f-to')||val('f-from'),team:val('f-team')};
+    if(d.from&&d.to<d.from){$('f-err').textContent='"Til" kan ikke være før "Fra".';return false}
+    /* samme hold kan ikke spille to stævner på samme tid */
+    const norm=x=>String(x||'').trim().toLowerCase();
+    const clash=all('tour').find(o=>o.id!==t.id&&norm(o.team)===norm(d.team)&&o.from&&d.from&&o.from<=d.to&&d.from<=(o.to||o.from));
+    if(clash){$('f-err').textContent=`${d.team?esc(d.team):'Holdet'} spiller allerede "${esc(clash.name)}" (${dateRange(clash)}). Samme hold kan ikke spille to stævner på samme tid – ret datoerne eller holdet.`;return false}
     if(n){const nt=put({id:uid(),kind:'tour',player:'',...d});view={v:'tour',t:nt.id}}else put({...t,...d})});
 }
 function newClubRec(name){return put({id:uid(),kind:'club',name,logo:'',color:COLORS[all('club').length%COLORS.length]})}
