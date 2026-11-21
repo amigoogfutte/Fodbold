@@ -101,9 +101,9 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.11 */
+/* Kampdag v0.1.12 */
 {
-const VERSION='0.1.11';
+const VERSION='0.1.12';
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -211,7 +211,7 @@ async function whoAmI(){try{const r=await api('mig');if(r.ok){const j=await r.js
 let needLogin=false;
 
 /* ---------- synkronisering ---------- */
-let syncing=false,again=false,syncTimer=null,syncState=HA?'busy':'off',lastOk=0;
+let fixedOnce=false,syncing=false,again=false,syncTimer=null,syncState=HA?'busy':'off',lastOk=0;
 function setSync(s){syncState=s;if(s==='ok')lastOk=Date.now();if(s==='login'){needLogin=true;render()}const el=$('syncline');if(el){el.outerHTML=syncLine()}}
 function syncLine(){
   if(!HA)return`<span id="syncline" class="syncline">Testversion – data gemmes kun i denne browser</span>`;
@@ -235,6 +235,7 @@ async function sync(){
       if(!cur||(r.updated||0)>(cur.updated||0)||((r.updated||0)===(cur.updated||0)&&JSON.stringify(cur)!==JSON.stringify(r))){S.records[r.id]=r;ch=true}}
     S.dirty=S.dirty.filter(id=>!(id in sent)||(S.records[id]&&S.records[id].updated!==sent[id]));
     S.since=Math.max(S.since||0,j.srv||0);persist();needLogin=false;setSync('ok');
+    if(!fixedOnce){fixedOnce=true;fixTeamYears()}
     if(ch)softRender();
   }catch(e){setSync(e.login?'login':navigator.onLine?'error':'offline')}
   finally{syncing=false;if(again){again=false;scheduleSync(300)}}
@@ -536,8 +537,9 @@ function tourForm(t){
   <div id="newteam" style="display:none"><label for="f-team">Nyt holds navn</label><input id="f-team" placeholder="F.eks. U11 piger"></div>
   <div id="f-err" class="err" role="alert"></div>`,()=>{
     const single=$('f-single').checked;
-    let team=val('f-teamsel');if(team==='__new'){team=val('f-team');if(!team){$('f-team').focus();return false}}
     const fy=+(val('f-from').slice(0,4))||curYear();
+    let team=val('f-teamsel');if(team==='__new'){team=val('f-team');if(!team){$('f-team').focus();return false}}
+    else if(team)team=ageName(team,filledY,fy); /* datoen kan være skiftet uden at listen nåede at følge med (iPhone) */
     if(team){teamRec(team,fy);LS.set('fb_lastteam',{n:team,y:fy})}
     let opp='';
     if(single){opp=val('f-sopp');
@@ -575,13 +577,23 @@ function tourForm(t){
   const ts=$('f-teamsel'),fyr=()=>+(val('f-from').slice(0,4))||curYear();
   /* holdlisten følger stævnets år, så U12 piger bliver vist som U13 piger på et stævne næste år */
   let selN,selY;{const lt=lastTeam(),y=fyr();if(!n){selN=t.team||'';selY=yearOf(t)}else if(lt){selN=lt.n;selY=lt.y}else{const tn=teamNames(y);selN=tn.length===1?tn[0]:'';selY=y}}
-  const fillTeams=()=>{const y=fyr(),tn=teamNames(y),cur=selN?ageName(selN,selY,y):'';if(cur&&!tn.some(x=>nTeam(x)===nTeam(cur)))tn.push(cur);
+  let filledY=fyr();
+  const fillTeams=()=>{const y=fyr();filledY=y;const tn=teamNames(y),cur=selN?ageName(selN,selY,y):'';if(cur&&!tn.some(x=>nTeam(x)===nTeam(cur)))tn.push(cur);
     ts.innerHTML=`<option value="">Vælg hold…</option>${tn.map(x=>`<option value="${esc(x)}" ${nTeam(x)===nTeam(cur)?'selected':''}>${esc(x)}</option>`).join('')}<option value="__new">+ Nyt hold…</option>`;
     if(!tn.length)ts.value='__new'};
   const tsh=()=>{$('newteam').style.display=ts.value==='__new'?'block':'none'};
   ts.addEventListener('change',()=>{if(ts.value!=='__new'){selN=ts.value;selY=fyr()}tsh();if(ts.value==='__new')$('f-team').focus()});
-  $('f-from').addEventListener('change',()=>{if(ts.value==='__new')return;fillTeams();tsh()});fillTeams();tsh();
+  const refill=()=>{if(ts.value==='__new'||fyr()===filledY)return;fillTeams();tsh()};
+  for(const ev of ['change','input','blur'])$('f-from').addEventListener(ev,refill);fillTeams();tsh();
   $('f-type').addEventListener('change',()=>{const i=$('f-type').value==='inde';$('l-sfield').textContent=i?'Hal':'Bane';$('f-sfield').placeholder=i?'F.eks. Hal 2':'F.eks. Bane 3'});$('f-snewc').addEventListener('input',fill);sh();
+}
+function fixTeamYears(){
+  if(VIEWER)return;const today=new Date().toLocaleDateString('sv-SE');
+  for(const t of all('tour')){if(!t.team||(t.to||t.from||'')<today)continue;const y=yearOf(t);
+    /* spring over, hvis et andet hold rent faktisk hedder sådan det år (fx et nyt, yngre U12-hold) */
+    if(all('team').some(x=>nTeam(ageName(x.name,recYear(x),y))===nTeam(t.team)))continue;
+    const rec=all('team').find(x=>recYear(x)<y&&nTeam(x.name)===nTeam(t.team));
+    if(rec){const nn=ageName(rec.name,recYear(rec),y);if(nn!==t.team)put({...t,team:nn})}}
 }
 function teamRec(name,year=curYear()){const n=nTeam(name);return all('team').find(x=>nTeam(ageName(x.name,recYear(x),year))===n)||put({id:uid(),kind:'team',name:String(name).trim(),year})}
 function teamForm(old){
