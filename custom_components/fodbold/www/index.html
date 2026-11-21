@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14713f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kampdag">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png?v=2">
+<title>Kampdag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: varm, praktisk forælder-på-sidelinjen; store knapper, ingen pynt der står i vejen
+   IDEA: stadionets resultattavle + græsbanen med kridtstreger
+   PICTURE: tavlen med logoer, stor stilling og kampminut øverst i hver kamp
+   COLOUR and TYPE: banegrøn, kridthvid, kortgul og kortrød; Barlow Condensed til tal, Barlow til tekst
+   LAYOUT: én kolonne (telefon først), tavle øverst, handlinger under, tidslinje nederst */
+:root{color-scheme:light dark;
+--bg:light-dark(#f3f6f1,#0b1a12);--card:light-dark(#fff,#132a1d);--ink:light-dark(#10231a,#eaf3ec);--mut:light-dark(#5d7266,#9db5a6);
+--line:light-dark(#dbe5dd,#244233);--pitch:#14713f;--pitch2:#0f5c33;--chalk:#f4fbf6;--yel:#ffd21f;--red:#e3342f;--acc:#14713f}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Barlow,system-ui,sans-serif;overflow-x:clip;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:720px;margin:0 auto;padding:0 max(4vw,14px) 96px}
+header.top{padding-top:max(18px,env(safe-area-inset-top));background:repeating-linear-gradient(90deg,var(--pitch) 0 56px,var(--pitch2) 56px 112px);color:var(--chalk);padding:18px max(4vw,14px) 22px}
+header.top .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
+header.top h1{font:800 34px/1.05 'Barlow Condensed',sans-serif;margin:0;flex:1;text-wrap:balance}
+.back{background:rgba(255,255,255,.16);border:0;border-radius:12px;width:44px;height:44px;color:#fff;font-size:22px;cursor:pointer}
+.tabs{display:flex;gap:8px;margin:14px 0 4px}
+.tab{flex:1;min-height:44px;border:1px solid var(--line);background:var(--card);border-radius:12px;font-weight:600;cursor:pointer}
+.tab.on{background:var(--acc);border-color:var(--acc);color:#fff}
+h2{font:700 24px/1.1 'Barlow Condensed',sans-serif;margin:26px 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.grow{flex:1}
+.mut{color:var(--mut);font-size:14px}
+.chip{display:inline-block;font-size:13px;font-weight:600;padding:2px 9px;border-radius:99px;background:light-dark(#e4efe7,#1d3a2a);white-space:nowrap}
+.chip.ude{background:light-dark(#dff3e5,#17402a)}.chip.inde{background:light-dark(#e3ebfb,#1b2b48)}.chip.flere{background:light-dark(#fff1c7,#45390f)}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:600;cursor:pointer}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.del{color:var(--red)}
+.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--yel);outline-offset:2px}
+.list .item{display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--line);cursor:pointer;min-height:60px}
+.list .item:last-child{border:0}
+.logo{width:40px;height:40px;border-radius:10px;flex:none;object-fit:contain;background:#fff;display:grid;place-items:center;font:700 15px 'Barlow Condensed';color:#fff}
+.score{font:800 26px 'Barlow Condensed';white-space:nowrap}
+/* resultattavle */
+.board{background:linear-gradient(#0e1813,#18261e);color:var(--chalk);border-radius:20px;padding:18px 14px 16px;margin-top:-6px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.board .teams{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;text-align:center}
+.board .logo{width:64px;height:64px;margin:0 auto 6px;border-radius:14px}
+.board .nm{font:700 18px/1.1 'Barlow Condensed';text-wrap:balance}
+.board .big{font:800 clamp(52px,16vw,84px)/1 'Barlow Condensed';letter-spacing:2px;font-variant-numeric:tabular-nums;padding:0 6px}
+.board .clock{text-align:center;font:600 16px 'Barlow Condensed';color:var(--yel);margin-top:6px;letter-spacing:1px}
+.board .cards{display:flex;justify-content:center;gap:4px;min-height:18px;margin-top:4px}
+.kc{display:inline-block;width:11px;height:16px;border-radius:2px}.kc.y{background:var(--yel)}.kc.r{background:var(--red)}
+.ctrl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.goal{min-height:84px;border-radius:16px;border:0;font:800 26px 'Barlow Condensed';cursor:pointer;background:var(--pitch);color:#fff}
+.goal.them{background:light-dark(#3b4a42,#2c3d34)}
+.goal:active{transform:scale(.97)}
+.cardbtns{display:flex;gap:8px}
+.cardbtns button{flex:1;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.tl .min:disabled{opacity:1}.tl .min{width:42px;font:700 18px 'Barlow Condensed';text-align:right;flex:none}
+.tl .x{margin-left:auto;border:0;background:none;color:var(--mut);font-size:20px;width:44px;height:44px;cursor:pointer}
+.mvp{display:flex;gap:12px;align-items:center}
+.mvp svg{flex:none}
+input,select{width:100%;min-height:46px;font-size:16px;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg)}
+label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;text-align:center}
+.stats b{display:block;font:800 30px/1 'Barlow Condensed'}
+.stats span{font-size:13px;color:var(--mut)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:9}
+#modal.open{display:flex}
+#modal .sheet{background:var(--card);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px max(4vw,16px) 28px;max-height:92vh;overflow:auto}
+#modal h3{font:700 24px 'Barlow Condensed';margin:0 0 6px}
+.user{background:rgba(255,255,255,.16);border:0;border-radius:99px;min-height:40px;padding:0 14px;color:#fff;font-weight:600;cursor:pointer;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lock{display:flex;gap:12px;align-items:center;background:light-dark(#fff4cc,#3d3410);border:1px solid #e0b000;border-radius:14px;padding:12px 14px;margin:14px 0}
+.lock div{flex:1}
+.note{font-size:13px;color:var(--mut);margin:24px 0 0;text-align:center}
+.empty{text-align:center;color:var(--mut);padding:22px 10px}
+@media(prefers-reduced-motion:no-preference){.flash{animation:fl .6s}@keyframes fl{from{color:var(--yel);transform:scale(1.15)}}}
+.gear{background:rgba(255,255,255,.16);border:0;border-radius:12px;width:44px;height:44px;color:#fff;cursor:pointer;display:grid;place-items:center;flex:none}
+.scope{font-size:12px;font-weight:600;background:var(--yel);color:#10231a;border-radius:99px;padding:2px 8px;white-space:nowrap}
+.syncline{display:block;width:100%;border:0;background:none;text-align:center;font-size:13px;color:var(--mut);margin-top:22px;min-height:36px;cursor:pointer}
+.syncline.err{color:var(--red)}
+.opt{display:block;width:100%;text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:12px 14px;margin:8px 0;cursor:pointer;min-height:60px}
+.opt.on{border-color:var(--acc);background:light-dark(#e4f3e9,#173825)}
+.opt b{display:block;font-size:17px}
+.err{color:var(--red);font-size:14px;margin-top:6px}
+@media(min-width:600px){#modal{align-items:center}#modal .sheet{border-radius:20px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"><div class="sheet" id="sheet"></div></div>
+<script>
+/* Kampdag v0.1.0 */
+{
+const HA=location.pathname.startsWith('/fodbold-app/');
+const $=id=>document.getElementById(id);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+let DEV=LS.get('fb_dev',null);if(!DEV){DEV=uid();LS.set('fb_dev',DEV)}
+const SAME_MS=10000;
+let ME=LS.get('fb_me','');
+/* ?se=<kode>: delt link – kun kigge med, uden login */
+const VIEWER=new URLSearchParams(location.search).get('se')||'';
+let OWNER=LS.get('fb_owner',false);
+const dbKey=()=>VIEWER?'fb_db_se':'fb_db';
+const emptyDb=()=>({records:{},dirty:[],since:0});
+let S=LS.get(dbKey(),null)||emptyDb();
+const persist=()=>LS.set(dbKey(),S);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const COLORS=['#14713f','#1f5fbf','#b3261e','#7a3fb0','#c26a00','#00796b','#37474f','#ad1457'];
+
+/* ---------- data: alt er poster {id, kind, updated} der synkroniseres hver for sig ---------- */
+const liveRecs=()=>Object.values(S.records).filter(r=>r&&!r.deleted);
+const all=k=>liveRecs().filter(r=>r.kind===k);
+const settings=()=>{const s=S.records.settings;return s&&!s.deleted?s:{id:'settings',kind:'settings',own:''}};
+const ownId=()=>settings().own;
+const club=id=>{const c=S.records[id];return c&&!c.deleted&&c.kind==='club'?c:{id:'',name:'Ukendt klub',color:'#777',logo:''}};
+const tour=id=>{const t=S.records[id];return t&&!t.deleted&&t.kind==='tour'?t:null};
+const matchesOf=tid=>all('match').filter(m=>m.tour===tid);
+const matchById=id=>{const m=S.records[id];return m&&!m.deleted&&m.kind==='match'?m:null};
+/* Samme mål/kort på FORSKELLIGE telefoner inden for 10 sek = samme hændelse. På samme telefon tæller de altid hver for sig.
+   Serveren gør det samme, så alle ender med samme resultat. */
+function dedupe(evs){
+  const srt=[...evs].sort((x,y)=>(x.at||0)-(y.at||0)||String(x.id).localeCompare(String(y.id)));
+  const out=[],got=new Map();
+  for(const e of srt){
+    const dup=out.find(o=>o.t===e.t&&o.side===e.side&&o.dev&&e.dev&&!got.get(o).has(e.dev)&&Math.abs((o.at||0)-(e.at||0))<=SAME_MS);
+    if(dup){got.get(dup).add(e.dev);continue}
+    out.push(e);got.set(e,new Set([e.dev]));
+  }
+  return out.sort((x,y)=>(x.min||999)-(y.min||999)||(x.at||0)-(y.at||0));
+}
+const eventsOf=mid=>dedupe(all('event').filter(e=>e.match===mid));
+function put(r){
+  const prev=S.records[r.id];
+  r={...r,updated:Math.max(Date.now(),prev?(prev.updated||0)+1:0)};delete r.srv;
+  S.records[r.id]=r;if(!S.dirty.includes(r.id))S.dirty.push(r.id);persist();scheduleSync(250);return r;
+}
+function del(id){const p=S.records[id];if(p)put({id,kind:p.kind,match:p.match,tour:p.tour,deleted:true})}
+
+const initials=n=>String(n||'').split(/[\s-]+/).filter(w=>/[A-Za-zÆØÅæøå0-9]/.test(w)).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const logo=(c,cls='')=>c.logo?`<img class="logo ${cls}" src="${c.logo}" alt="">`:`<span class="logo ${cls}" style="background:${c.color||'#777'}">${esc(initials(c.name))}</span>`;
+const score=m=>{let a=0,b=0;for(const e of eventsOf(m.id))if(e.t==='goal')e.side==='os'?a++:b++;return[a,b]};
+const typeTxt={ude:'Udendørs',inde:'Indendørs',flere:'Flere dage'};
+const dFmt=s=>s?new Date(s.length===10?s+'T12:00':s).toLocaleDateString('da-DK',{weekday:'short',day:'numeric',month:'short'}):'';
+const tFmt=s=>s&&s.includes('T')?s.slice(11,16):'';
+const dateRange=t=>t.from===t.to||!t.to?dFmt(t.from):dFmt(t.from)+' – '+dFmt(t.to);
+function record(ms){let w=0,d=0,l=0,f=0,a=0;for(const m of ms){if(m.status==='plan')continue;const[x,y]=score(m);f+=x;a+=y;x>y?w++:x<y?l++:d++}return{w,d,l,f,a}}
+const curMin=m=>m.start?Math.max(1,Math.floor((Date.now()-m.start)/60000)+1):null;
+const cup=(s=44)=>`<svg width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6h20v12a10 10 0 0 1-20 0z" fill="#ffd21f"/><path d="M14 9H7v4a7 7 0 0 0 7 7M34 9h7v4a7 7 0 0 1-7 7" fill="none" stroke="#e0b000" stroke-width="3"/><rect x="21" y="27" width="6" height="8" fill="#e0b000"/><rect x="14" y="35" width="20" height="6" rx="2" fill="#8a6a00"/><path d="M18 9h3v10h-3z" fill="#fff" opacity=".45"/></svg>`;
+const cardIcon=t=>`<span class="kc ${t==='red'?'r':'y'}"></span>`;
+const gearSvg=`<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>`;
+
+/* ---------- login via Home Assistant (samme måde som Timer-appen) ---------- */
+let inFrame=false;try{inFrame=window.self!==window.top}catch(e){inFrame=true}
+const APP_BASE=location.origin+'/fodbold-app/',CLIENT_ID=APP_BASE,REDIRECT_URI=APP_BASE+'index.html';
+const authGet=()=>LS.get('fb_auth',null),authSet=a=>a?LS.set('fb_auth',a):LS.del('fb_auth');
+function fetchT(url,opts,ms){const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms||20000);return fetch(url,{...(opts||{}),signal:ac.signal}).finally(()=>clearTimeout(t))}
+async function tokenRequest(p){const r=await fetchT('/auth/token',{method:'POST',body:new URLSearchParams(p)});if(!r.ok){const e=new Error('auth');e.status=r.status;throw e}
+  const j=await r.json();return{access_token:j.access_token,refresh_token:j.refresh_token||p.refresh_token,expires:Date.now()+(j.expires_in||1800)*1000,clientId:p.client_id}}
+async function parentToken(){try{if(!inFrame)return null;const ha=window.parent.document.querySelector('home-assistant');const a=ha&&ha.hass&&ha.hass.auth;if(!a)return null;if(a.expired)await Promise.race([a.refreshAccessToken(),new Promise((_,r)=>setTimeout(()=>r(new Error('t')),15000))]);return a.accessToken||null}catch(e){return null}}
+async function getToken(force){
+  const pt=await parentToken();if(pt)return pt;
+  let a=authGet();
+  if(!a){const h=LS.get('hassTokens',null);if(h&&h.refresh_token&&h.clientId)a={...h,borrowed:true}}
+  if(!a)return null;
+  if(!force&&a.access_token&&a.expires>Date.now()+30000)return a.access_token;
+  try{const n=await tokenRequest({grant_type:'refresh_token',refresh_token:a.refresh_token,client_id:a.clientId});if(!a.borrowed)authSet(n);return n.access_token}
+  catch(e){if(e.status===400||e.status===403){if(!a.borrowed)authSet(null);return null}throw e}
+}
+function startLogin(){const st=uid();LS.set('fb_state',st);location.href='/auth/authorize?response_type=code&client_id='+encodeURIComponent(CLIENT_ID)+'&redirect_uri='+encodeURIComponent(REDIRECT_URI)+'&state='+encodeURIComponent(st)}
+async function handleLoginReturn(){
+  if(!HA)return;const q=new URLSearchParams(location.search),code=q.get('code');if(!code)return;
+  history.replaceState(null,'',location.pathname+location.hash);
+  const exp=LS.get('fb_state',null);LS.del('fb_state');if(exp&&q.get('state')!==exp)return;
+  try{authSet(await tokenRequest({grant_type:'authorization_code',code,client_id:CLIENT_ID}))}catch(e){}
+}
+async function api(path,opts={},retried){
+  const t=await getToken(retried);if(!t){const e=new Error('login');e.login=true;throw e}
+  const r=await fetchT('/api/fodbold/'+path,{...opts,headers:{...(opts.headers||{}),Authorization:'Bearer '+t}});
+  if(r.status===401&&!retried)return api(path,opts,true);
+  if(r.status===401){authSet(null);const e=new Error('login');e.login=true;throw e}
+  return r;
+}
+async function whoAmI(){try{const r=await api('mig');if(r.ok){const j=await r.json();const ow=!!j.ejer;if((j.navn&&j.navn!==ME)||ow!==OWNER){ME=j.navn||ME;OWNER=ow;LS.set('fb_me',ME);LS.set('fb_owner',ow);softRender()}return true}}catch(e){if(e.login){needLogin=true;render()}}return false}
+let needLogin=false;
+
+/* ---------- synkronisering ---------- */
+let syncing=false,again=false,syncTimer=null,syncState=HA?'busy':'off',lastOk=0;
+function setSync(s){syncState=s;if(s==='ok')lastOk=Date.now();if(s==='login'){needLogin=true;render()}const el=$('syncline');if(el){el.outerHTML=syncLine()}}
+function syncLine(){
+  if(!HA)return`<span id="syncline" class="syncline">Testversion – data gemmes kun i denne browser</span>`;
+  const n=S.dirty.length,t=lastOk?new Date(lastOk).toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'}):'';
+  const txt={ok:n?`${n} ændring(er) venter på at blive sendt`:`Synkroniseret ${t}`,busy:'Synkroniserer …',offline:`Ingen forbindelse – gemmes på telefonen${n?` (${n} venter)`:''}`,error:'Kunne ikke synkronisere – tryk for at prøve igen',login:'Ikke logget ind – tryk for at logge ind',dead:'Linket virker ikke længere – bed om et nyt'}[syncState]||'';
+  return`<button id="syncline" class="syncline ${syncState==='error'||syncState==='login'||syncState==='dead'?'err':''}" data-a="sync">${VIEWER&&syncState==='ok'?'Opdateres automatisk · ':''}${txt}</button>`;
+}
+async function sync(){
+  if(!HA)return;if(syncing){again=true;return}
+  if(!navigator.onLine){setSync('offline');return}
+  syncing=true;
+  try{
+    const sent={},poster=[];if(!VIEWER)for(const id of S.dirty){const r=S.records[id];if(r){sent[id]=r.updated;poster.push(r)}}
+    const res=VIEWER?await fetchT('/api/fodbold/se/'+encodeURIComponent(VIEWER)+'?since='+(S.since||0),{cache:'no-store'})
+      :await api('sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({poster,since:S.since||0})});
+    if(VIEWER&&res.status===404){setSync('dead');return}
+    if(!res.ok)throw new Error('sync '+res.status);
+    const j=await res.json();
+    let ch=false;
+    for(const r of j.poster||[]){if(!r||!r.id)continue;const cur=S.records[r.id];
+      if(!cur||(r.updated||0)>(cur.updated||0)||((r.updated||0)===(cur.updated||0)&&JSON.stringify(cur)!==JSON.stringify(r))){S.records[r.id]=r;ch=true}}
+    S.dirty=S.dirty.filter(id=>!(id in sent)||(S.records[id]&&S.records[id].updated!==sent[id]));
+    S.since=Math.max(S.since||0,j.srv||0);persist();needLogin=false;setSync('ok');
+    if(ch)softRender();
+  }catch(e){setSync(e.login?'login':navigator.onLine?'error':'offline')}
+  finally{syncing=false;if(again){again=false;scheduleSync(300)}}
+}
+function scheduleSync(ms){if(!HA)return;clearTimeout(syncTimer);syncTimer=setTimeout(sync,ms)}
+/* tegn kun igen når man ikke er midt i at skrive noget */
+let pendingRender=false;
+function softRender(){const a=document.activeElement;if(modal.classList.contains('open')||(a&&(a.tagName==='INPUT'||a.tagName==='SELECT'))){pendingRender=true;return}render()}
+document.addEventListener('focusout',()=>setTimeout(()=>{if(pendingRender&&!modal.classList.contains('open')){pendingRender=false;render()}},50));
+setInterval(()=>{if(HA&&!document.hidden&&!needLogin&&syncState!=='dead')sync()},VIEWER?6000:4000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
+window.addEventListener('online',()=>sync());
+
+/* ---------- visning ---------- */
+let view={v:'home'};
+const app=$('app'),modal=$('modal'),sheet=$('sheet');
+function go(v){view=v;render();window.scrollTo(0,0)}
+function head(title,back){return`<header class="top"><div class="in">${back?`<button class="back" data-a="back" aria-label="Tilbage">‹</button>`:''}<h1>${title}</h1>${VIEWER?'<span class="scope">Følg med</span>':OWNER?`<button class="gear" data-a="settings" aria-label="Del link">${gearSvg}</button>`:''}</div></header>`}
+const lockOf=t=>!VIEWER&&t&&matchesOf(t.id).find(m=>m.status==='live'&&m.by&&m.by!==ME);
+/* delt link: fjern alle knapper der ændrer noget */
+const READ_OK=new Set(['back','home','clubs','sync','open-match','open-tour']);
+function applyViewer(){if(!VIEWER)return;app.querySelectorAll('[data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});app.querySelectorAll('[data-a]').forEach(b=>{if(!READ_OK.has(b.dataset.a))b.remove()});app.querySelectorAll('input').forEach(i=>i.disabled=true);app.querySelectorAll('.ctrl,.cardbtns').forEach(x=>x.remove());
+  app.querySelectorAll('.list .item[data-a=edit-club]').forEach(x=>x.removeAttribute('data-a'))}
+const VIEW_OK=new Set(['back','home','clubs','settings','sync','open-match','open-tour','takeover']);
+function applyLock(t){
+  const L=lockOf(t);if(!L)return;
+  app.querySelectorAll('.wrap [data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});
+  app.querySelectorAll('.wrap [data-a]').forEach(b=>{if(!VIEW_OK.has(b.dataset.a))b.remove()});
+  app.querySelectorAll('.wrap input').forEach(i=>i.disabled=true);
+  app.querySelectorAll('.ctrl,.cardbtns').forEach(x=>x.remove());
+  app.querySelector('.wrap').insertAdjacentHTML('afterbegin',`<div class="lock"><div><b>Kampen styres live af ${esc(L.by)}</b><br>Du kan kun kigge med på dette stævne – du kan godt styre et andet stævne.</div><button class="btn" data-a="takeover">Overtag</button></div>`);
+}
+function render(){
+  if(!VIEWER&&HA&&needLogin)return renderLogin();
+  if(!VIEWER&&!HA&&!ME)return renderName();
+  if(view.v==='tour'){renderTour();applyLock(tour(view.t))}
+  else if(view.v==='match'){renderMatch();applyLock(tour(view.t))}
+  else if(view.v==='clubs')renderClubs();
+  else renderHome();
+  applyViewer();
+}
+function renderLogin(){
+  app.innerHTML=`<header class="top"><div class="in"><h1>Kampdag</h1></div></header><div class="wrap"><h2>Log ind</h2>
+  <div class="card"><p>Log ind med din Home Assistant-bruger. Dit navn bliver vist for de andre, når du styrer en kamp live.</p>
+  <button class="btn pri" style="width:100%" data-a="login">Log ind med Home Assistant</button></div></div>`;
+}
+function renderName(){
+  app.innerHTML=`<header class="top"><div class="in"><h1>Kampdag</h1></div></header><div class="wrap"><h2>Hvem er du?</h2>
+  <div class="card"><label for="f-me" style="margin-top:0">Dit navn</label><input id="f-me" placeholder="F.eks. Jesper">
+  <button class="btn pri" style="width:100%;margin-top:14px" data-a="setname">Fortsæt</button></div></div>`;
+}
+function tabs(on){return`<div class="tabs"><button class="tab ${on==='home'?'on':''}" data-a="home">Stævner</button><button class="tab ${on==='clubs'?'on':''}" data-a="clubs">Klubber</button></div>`}
+function board(t,m){
+  const own=club(ownId()),opp=club(m.opp),[a,b]=score(m),evs=eventsOf(m.id);
+  const cards=side=>evs.filter(e=>e.t!=='goal'&&e.side===side).map(e=>cardIcon(e.t)).join('');
+  const clk=m.status==='live'?`${curMin(m)}. minut${m.by?' · '+esc(m.by):''}`:m.status==='slut'?'SLUT':`${dFmt(m.when)} kl. ${tFmt(m.when)}`;
+  return`<div class="board"><div class="teams">
+   <div>${logo(own)}<div class="nm">${esc(own.id?own.name:'Vores hold')}${t.team?`<br><span style="font-weight:600;font-size:14px;opacity:.75">${esc(t.team)}</span>`:''}</div><div class="cards">${cards('os')}</div></div>
+   <div class="big" id="bigscore">${m.status==='plan'?'–':a+'-'+b}</div>
+   <div>${logo(opp)}<div class="nm">${esc(opp.name)}</div><div class="cards">${cards('dem')}</div></div></div>
+   <div class="clock" id="clock">${clk}${m.field?' · '+esc(m.field):''}</div></div>`;
+}
+function renderHome(){
+  const ts=all('tour'),ms=all('match').filter(m=>tour(m.tour));
+  const live=ms.filter(m=>m.status==='live');
+  const next=live.length?null:ms.filter(m=>m.status==='plan'&&m.when>=new Date(Date.now()-3*3600e3).toISOString().slice(0,16)).sort((a,b)=>a.when.localeCompare(b.when))[0];
+  const show=live.length?live:next?[next]:[];
+  const sorted=[...ts].sort((a,b)=>(b.from||'').localeCompare(a.from||''));
+  app.innerHTML=head('Kampdag')+`<div class="wrap">${tabs('home')}
+  ${!ownId()&&!VIEWER?`<div class="card"><b>Start med jeres egen klub</b><p class="mut" style="margin:4px 0 10px">Opret klubben, og sæt flueben i "Det er vores klub".</p><button class="btn pri" data-a="new-club" data-own="1">+ Opret vores klub</button></div>`:''}
+  ${show.map(m=>`<h2>${m.status==='live'?'I gang nu':'Næste kamp'}</h2><div data-a="open-match" data-t="${m.tour}" data-m="${m.id}" style="cursor:pointer">${board(tour(m.tour),m)}</div>`).join('')}
+  <div class="row" style="margin-top:8px"><h2 class="grow">Stævner</h2><button class="btn pri" data-a="new-tour">+ Nyt stævne</button></div>
+  <div class="card list" style="padding:0">${sorted.length?sorted.map(t=>{const tm=matchesOf(t.id),r=record(tm);return`<div class="item" data-a="open-tour" data-t="${t.id}">
+   <div class="grow"><div style="font-weight:600">${esc(t.name)}</div><div class="mut">${dateRange(t)}${t.place?' · '+esc(t.place):''} · ${tm.length} kampe</div>
+   <div style="margin-top:4px"><span class="chip ${t.type}">${typeTxt[t.type]||''}</span> ${t.team?`<span class="chip">${esc(t.team)}</span>`:''} ${t.player?`<span class="chip">🏆 ${esc(t.player)}</span>`:''}</div></div>
+   <div style="text-align:right"><div class="score" style="font-size:20px">${r.w}-${r.d}-${r.l}</div><div class="mut">V-U-T</div></div></div>`}).join(''):'<div class="empty">Ingen stævner endnu</div>'}</div>
+  ${syncLine()}</div>`;
+}
+function renderTour(){
+  const t=tour(view.t);if(!t)return go({v:'home'});
+  const ms=matchesOf(t.id).sort((a,b)=>(a.when||'').localeCompare(b.when||'')),r=record(ms);
+  let lastDay='';
+  app.innerHTML=head(esc(t.name),1)+`<div class="wrap">
+  <div class="row" style="margin-top:14px"><span class="chip ${t.type}">${typeTxt[t.type]||''}</span><span class="mut">${dateRange(t)}${t.place?' · '+esc(t.place):''}${t.team?' · '+esc(t.team):''}</span></div>
+  <div class="card stats"><div><b>${r.w}</b><span>Vundet</span></div><div><b>${r.d}</b><span>Uafgjort</span></div><div><b>${r.l}</b><span>Tabt</span></div><div><b>${r.f}-${r.a}</b><span>Mål</span></div></div>
+  <div class="row"><h2 class="grow">Kampe</h2><button class="btn pri" data-a="new-match">+ Tilføj kamp</button></div>
+  <div class="card list" style="padding:0">${ms.length?ms.map(m=>{const o=club(m.opp),[a,b]=score(m),day=(m.when||'').slice(0,10);
+   const dh=t.type==='flere'&&day!==lastDay?`<div style="padding:8px 12px;font-weight:600;background:var(--bg)">${dFmt(day)}</div>`:'';lastDay=day;
+   return dh+`<div class="item" data-a="open-match" data-t="${t.id}" data-m="${m.id}"><div style="width:44px;font:700 18px 'Barlow Condensed'">${tFmt(m.when)}</div>${logo(o)}
+   <div class="grow"><div style="font-weight:600">${esc(o.name)}</div><div class="mut">${esc(m.field||'')}${m.status==='live'?' · <b style="color:var(--red)">LIVE</b>'+(m.by?' · '+esc(m.by):''):''}</div></div>
+   <div class="score">${m.status==='plan'?'<span class="mut" style="font-size:15px">Ikke spillet</span>':a+'-'+b}</div></div>`}).join(''):'<div class="empty">Ingen kampe endnu – tilføj dem hjemmefra, eller når de kommer under stævnet</div>'}</div>
+  <h2>Turneringens spiller</h2>
+  <div class="card mvp">${cup()}<div class="grow"><label for="mvp" style="margin-top:0">Hvem fik pokalen?</label><input id="mvp" value="${esc(t.player||'')}" placeholder="Navn"></div></div>
+  ${OWNER&&!VIEWER&&ms.length?`<button class="btn pri" style="width:100%;margin-top:18px" data-a="picture">📷 Billede til Facebook</button>`:''}
+  <div class="row" style="margin-top:12px"><button class="btn" data-a="edit-tour">Ret stævne</button><button class="btn del" data-a="del-tour">Slet stævne</button></div>
+  ${syncLine()}</div>`;
+  $('mvp').addEventListener('change',e=>{const tt=tour(view.t);if(tt)put({...tt,player:e.target.value.trim()})});
+}
+function renderMatch(){
+  const t=tour(view.t),m=matchById(view.m);if(!t||!m)return go(t?{v:'tour',t:t.id}:{v:'home'});
+  const lbl={goal:'Mål',yellow:'Gult kort',red:'Rødt kort'},ev=[...eventsOf(m.id)].reverse(),own=club(ownId()),opp=club(m.opp);
+  app.innerHTML=head(esc(t.name),1)+`<div class="wrap" style="padding-top:20px">${board(t,m)}
+  ${m.status==='plan'?`<button class="btn pri" style="width:100%;min-height:60px;margin-top:14px;font-size:20px" data-a="start">Start kamp</button>`:''}
+  ${m.status!=='plan'?`<div class="ctrl"><button class="goal" data-a="goal" data-s="os">+ MÅL<br><span style="font-size:15px;font-weight:600">${esc(own.id?own.name:'Os')}</span></button><button class="goal them" data-a="goal" data-s="dem">+ MÅL<br><span style="font-size:15px;font-weight:600">${esc(opp.name)}</span></button>
+   <div class="cardbtns"><button data-a="card" data-s="os" data-k="yellow">${cardIcon('yellow')} Gult</button><button data-a="card" data-s="os" data-k="red">${cardIcon('red')} Rødt</button></div>
+   <div class="cardbtns"><button data-a="card" data-s="dem" data-k="yellow">${cardIcon('yellow')} Gult</button><button data-a="card" data-s="dem" data-k="red">${cardIcon('red')} Rødt</button></div></div>`:''}
+  <div class="row" style="margin-top:12px">
+   ${m.status==='live'?`<button class="btn pri grow" data-a="end">Slut kamp</button>`:''}
+   ${m.status==='slut'?`<button class="btn grow" data-a="reopen">Genåbn kamp</button>`:''}
+   ${ev.length&&m.status!=='plan'?`<button class="btn grow" data-a="undo">Fortryd sidste</button>`:''}</div>
+  <h2>Hændelser</h2>
+  ${ev.length?`<ul class="tl">${ev.map(e=>`<li><button class="min" data-a="ed-min" data-e="${e.id}" aria-label="Ret minut" style="border:0;background:none;cursor:pointer;min-height:44px;color:inherit">${e.min?e.min+"'":'–'}</button>${e.t==='goal'?'⚽':cardIcon(e.t)}<span><b>${lbl[e.t]}</b> – ${esc(e.side==='os'?own.name:opp.name)}${e.by?` <span class="mut">(${esc(e.by)})</span>`:''}</span><button class="x" data-a="del-ev" data-e="${e.id}" aria-label="Slet">×</button></li>`).join('')}</ul>`:'<div class="empty">Ingen mål eller kort endnu</div>'}
+  <div class="row" style="margin-top:20px"><button class="btn" data-a="edit-match">Ret kamp</button><button class="btn del" data-a="del-match">Slet kamp</button></div>
+  ${syncLine()}</div>`;
+}
+function renderClubs(){
+  const own=ownId(),cs=all('club').sort((a,b)=>(b.id===own)-(a.id===own)||a.name.localeCompare(b.name,'da'));
+  app.innerHTML=head('Klubber')+`<div class="wrap">${tabs('clubs')}
+  <div class="row"><h2 class="grow">${cs.length} klubber</h2><button class="btn pri" data-a="new-club">+ Ny klub</button></div>
+  <div class="card list" style="padding:0">${cs.length?cs.map(c=>`<div class="item" data-a="edit-club" data-c="${c.id}">${logo(c)}<div class="grow" style="font-weight:600">${esc(c.name)}</div>${c.id===own?'<span class="chip">Vores klub</span>':''}${c.logo?'':'<span class="mut">+ logo</span>'}</div>`).join(''):'<div class="empty">Ingen klubber endnu</div>'}</div>
+  ${syncLine()}</div>`;
+}
+
+/* ---------- ark (formularer) ---------- */
+const closeSheet=()=>{modal.classList.remove('open');sheet.onclick=null;render()};
+function openSheet(html,onSave){sheet.innerHTML=html+`<div class="row" style="margin-top:18px"><button class="btn grow" data-x="cancel">Annuller</button><button class="btn pri grow" data-x="ok">Gem</button></div>`;modal.classList.add('open');
+  sheet.onclick=e=>{const x=e.target.closest('[data-x]');if(!x)return;if(x.dataset.x==='ok'&&onSave()===false)return;closeSheet()}}
+function ask(title,text,yesTxt,yes,danger){sheet.innerHTML=`<h3>${title}</h3>${text?`<p>${text}</p>`:''}<div class="row" style="margin-top:18px"><button class="btn grow" data-x="no">Annuller</button><button class="btn pri grow" data-x="yes" ${danger?'style="background:var(--red);border-color:var(--red)"':''}>${yesTxt}</button></div>`;modal.classList.add('open');
+  sheet.onclick=e=>{const x=e.target.closest('[data-x]');if(!x)return;modal.classList.remove('open');sheet.onclick=null;if(x.dataset.x==='yes')yes();render()}}
+modal.addEventListener('click',e=>{if(e.target===modal)closeSheet()});
+const val=id=>($(id)?.value||'').trim();
+
+/* ---------- billede af dagens kampe / hele turneringen (til Facebook) ---------- */
+const loadImg=src=>new Promise(r=>{if(!src)return r(null);const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src});
+function rr(x,X,y,w,h,r){x.beginPath();x.moveTo(X+r,y);x.arcTo(X+w,y,X+w,y+h,r);x.arcTo(X+w,y+h,X,y+h,r);x.arcTo(X,y+h,X,y,r);x.arcTo(X,y,X+w,y,r);x.closePath()}
+async function drawLogo(x,c,X,Y,s){const im=await loadImg(c.logo);x.save();rr(x,X,Y,s,s,s*.18);x.fillStyle=c.logo?'#fff':(c.color||'#777');x.fill();x.clip();
+  if(im){const k=Math.min(s*.86/im.width,s*.86/im.height)||1;x.drawImage(im,X+(s-im.width*k)/2,Y+(s-im.height*k)/2,im.width*k,im.height*k)}
+  else{x.fillStyle='#fff';x.font=`700 ${s*.42}px "Barlow Condensed",sans-serif`;x.textAlign='center';x.textBaseline='middle';x.fillText(initials(c.name),X+s/2,Y+s/2+2)}x.restore()}
+function fit(x,txt,max){let t=String(txt||'');if(x.measureText(t).width<=max)return t;while(t.length>1&&x.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…'}
+async function makePicture(t,day){
+  try{await Promise.all(['800 80px "Barlow Condensed"','700 40px "Barlow Condensed"','500 30px Barlow','600 30px Barlow'].map(f=>document.fonts.load(f)))}catch(e){}
+  const ms=matchesOf(t.id).filter(m=>!day||(m.when||'').slice(0,10)===day).sort((a,b)=>(a.when||'').localeCompare(b.when||''));
+  const own=club(ownId()),r=record(ms),W=1080,rowH=128,top=330,showDay=!day&&t.type==='flere';
+  const days=[...new Set(ms.map(m=>(m.when||'').slice(0,10)))];
+  const H=top+ms.length*(rowH+16)+(showDay?days.length*56:0)+(t.player?170:0)+190;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+  for(let i=0;i<W;i+=90){x.fillStyle=(i/90)%2?'#0f5c33':'#14713f';x.fillRect(i,0,90,H)}
+  x.strokeStyle='rgba(255,255,255,.18)';x.lineWidth=6;x.beginPath();x.arc(W/2,H+40,260,Math.PI,2*Math.PI);x.stroke();
+  x.fillStyle='#fff';rr(x,54,54,132,132,26);x.fill();await drawLogo(x,own,60,60,120);
+  x.fillStyle='#fff';x.textAlign='left';x.textBaseline='alphabetic';
+  x.font='800 74px "Barlow Condensed",sans-serif';x.fillText(fit(x,t.name,W-260),210,128);
+  x.font='500 32px Barlow,sans-serif';x.fillStyle='rgba(255,255,255,.85)';
+  x.fillText(fit(x,[own.id?own.name:'',t.team].filter(Boolean).join(' · '),W-260),212,176);
+  x.fillText(fit(x,[day?dFmt(day):dateRange(t),t.place].filter(Boolean).join(' · '),W-120),62,250);
+  x.font='700 40px "Barlow Condensed",sans-serif';x.fillStyle='#ffd21f';x.textAlign='right';
+  x.fillText(`${r.w}V  ${r.d}U  ${r.l}T   ·   ${r.f}-${r.a}`,W-60,250);
+  let y=top,last='';
+  for(const m of ms){
+    const d=(m.when||'').slice(0,10);
+    if(showDay&&d!==last){x.textAlign='left';x.fillStyle='#fff';x.font='700 38px "Barlow Condensed",sans-serif';x.fillText(dFmt(d),62,y+38);y+=56;last=d}
+    const o=club(m.opp),[a,b]=score(m),res=m.status==='plan'?'':a>b?'V':a<b?'T':'U';
+    x.fillStyle='rgba(255,255,255,.96)';rr(x,40,y,W-80,rowH,22);x.fill();
+    x.fillStyle=res==='V'?'#1fb35f':res==='T'?'#e3342f':res==='U'?'#8a8f8c':'#d6ddd8';rr(x,40,y,16,rowH,8);x.fill();
+    x.textBaseline='middle';x.textAlign='left';x.fillStyle='#5d7266';x.font='700 38px "Barlow Condensed",sans-serif';x.fillText(tFmt(m.when),80,y+rowH/2);
+    await drawLogo(x,o,190,y+24,80);
+    x.fillStyle='#10231a';x.font='600 36px Barlow,sans-serif';x.fillText(fit(x,o.name,500),292,y+rowH/2);
+    x.textAlign='right';x.font='800 64px "Barlow Condensed",sans-serif';x.fillStyle='#10231a';
+    x.fillText(m.status==='plan'?'–':`${a}-${b}`,W-80,y+rowH/2+2);
+    const cards=eventsOf(m.id).filter(e=>e.t!=='goal');let cx=W-80-x.measureText(m.status==='plan'?'–':`${a}-${b}`).width-30;
+    for(const c of cards.slice(0,4)){x.fillStyle=c.t==='red'?'#e3342f':'#ffd21f';rr(x,cx-20,y+rowH/2-15,20,30,3);x.fill();cx-=28}
+    x.textBaseline='alphabetic';y+=rowH+16;
+  }
+  if(t.player){
+    y+=20;x.fillStyle='rgba(0,0,0,.28)';rr(x,40,y,W-80,130,22);x.fill();
+    const svg='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(cup(48).replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" '));
+    const ci=await loadImg(svg);if(ci)x.drawImage(ci,70,y+17,96,96);
+    x.textAlign='left';x.fillStyle='#ffd21f';x.font='700 34px "Barlow Condensed",sans-serif';x.fillText('TURNERINGENS SPILLER',190,y+55);
+    x.fillStyle='#fff';x.font='800 50px "Barlow Condensed",sans-serif';x.fillText(fit(x,t.player,W-260),190,y+105);y+=150;
+  }
+  x.textAlign='center';x.fillStyle='rgba(255,255,255,.7)';x.font='500 26px Barlow,sans-serif';x.fillText('Kampdag',W/2,H-50);
+  return new Promise(res=>cv.toBlob(res,'image/png'));
+}
+async function pictureSheet(t){
+  const today=new Date().toISOString().slice(0,10);
+  const days=[...new Set(matchesOf(t.id).map(m=>(m.when||'').slice(0,10)).filter(Boolean))].sort();
+  let day=days.includes(today)?today:(days.length===1?null:null);
+  const draw=async()=>{
+    sheet.innerHTML=`<h3>Billede til Facebook</h3>
+    ${days.length>1?`<label for="f-day">Hvilke kampe?</label><select id="f-day"><option value="">Hele turneringen</option>${days.map(d=>`<option value="${d}" ${d===day?'selected':''}>${d===today?'I dag – ':''}${dFmt(d)}</option>`).join('')}</select>`:''}
+    <div id="pic" style="margin-top:12px;min-height:120px;display:grid;place-items:center" class="mut">Laver billede …</div>
+    <div class="row" style="margin-top:12px">${navigator.canShare?'<button class="btn pri grow" data-x="share" disabled>Del …</button>':''}<a class="btn grow" id="dl" style="display:grid;place-items:center;text-decoration:none" download="kampdag.png">Gem billede</a></div>
+    <p class="mut">På iPhone: tryk "Del …" og vælg Facebook, eller hold fingeren på billedet og vælg "Arkivér i Fotos".</p>
+    <div class="row"><button class="btn grow" data-x="close">Luk</button></div>`;
+    modal.classList.add('open');
+    const sel=$('f-day');if(sel)sel.onchange=()=>{day=sel.value||null;draw()};
+    const blob=await makePicture(t,day);const url=URL.createObjectURL(blob);
+    $('pic').innerHTML=`<img src="${url}" alt="Billede af kampene" style="width:100%;border-radius:12px">`;
+    $('dl').href=url;$('dl').download=(t.name+(day?' '+day:'')).replace(/[^\wæøåÆØÅ -]/g,'')+'.png';
+    const file=new File([blob],'kampdag.png',{type:'image/png'});const sb=sheet.querySelector('[data-x=share]');
+    if(sb){if(navigator.canShare({files:[file]}))sb.disabled=false;else sb.remove()}
+    sheet.onclick=async e=>{const x=e.target.closest('[data-x]');if(!x)return;
+      if(x.dataset.x==='share'){try{await navigator.share({files:[file],title:t.name})}catch(err){}return}
+      URL.revokeObjectURL(url);closeSheet()};
+  };
+  draw();
+}
+let shareTok=null;
+const shareUrl=()=>shareTok?location.origin+'/fodbold-app/index.html?se='+shareTok:'';
+async function settingsSheet(load=true){
+  sheet.innerHTML=`<h3>Del med andre</h3>
+  <p class="mut" style="margin-top:0">Send et link til fx familien, så de kan følge stævner, kampe og stillingen live – uden at logge ind. De kan kun kigge, ikke rette noget.</p>
+  ${shareTok?`<input id="sharelink" readonly value="${esc(shareUrl())}" style="font-size:14px">
+   <div class="row" style="margin-top:10px"><button class="btn pri grow" data-x="copy">Kopiér link</button>${navigator.share?'<button class="btn pri grow" data-x="share">Del …</button>':''}</div>
+   <div id="sharemsg" class="mut" style="min-height:22px;margin-top:6px"></div>
+   <div class="row" style="margin-top:6px"><button class="btn grow" data-x="new">Lav nyt link</button><button class="btn del grow" data-x="stop">Stop deling</button></div>
+   <p class="mut">Nyt link eller stop deling gør det gamle link ugyldigt.</p>`
+  :`<button class="btn pri" style="width:100%" data-x="new">${load?'Henter …':'Lav delelink'}</button><div id="sharemsg" class="err"></div>`}
+  <p class="mut" style="margin-top:16px">Logget ind som <b>${esc(ME)}</b>. Kun du kan se dette tandhjul.</p>
+  <div class="row" style="margin-top:12px"><button class="btn grow" data-x="close">Luk</button></div>`;
+  modal.classList.add('open');
+  const msg=t=>{const m=$('sharemsg');if(m)m.textContent=t};
+  const call=async(method)=>{try{const r=await api('del',{method});const j=await r.json();if(!r.ok)throw new Error(j.message||'Fejl');shareTok=j.token;settingsSheet(false)}catch(e){msg(e.login?'Ikke logget ind':'Kunne ikke kontakte Home Assistant')}};
+  sheet.onclick=async e=>{const x=e.target.closest('[data-x]');if(!x)return;
+    switch(x.dataset.x){
+      case 'copy':try{await navigator.clipboard.writeText(shareUrl());msg('Linket er kopieret')}catch(err){$('sharelink').select();msg('Markér og kopiér linket')}return;
+      case 'share':try{await navigator.share({title:'Kampdag',text:'Følg kampene her:',url:shareUrl()})}catch(err){}return;
+      case 'new':return call('POST');
+      case 'stop':return call('DELETE');
+      default:closeSheet();
+    }};
+  if(load)call('GET');
+}
+function tourForm(t){
+  const n=!t;t=t||{name:'',type:'ude',place:'',from:new Date().toISOString().slice(0,10),to:'',team:''};
+  openSheet(`<h3>${n?'Nyt stævne':'Ret stævne'}</h3>
+  <label for="f-name">Navn</label><input id="f-name" value="${esc(t.name)}" placeholder="F.eks. Vildbjerg Cup">
+  <label for="f-type">Type</label><select id="f-type">${Object.entries(typeTxt).map(([k,v])=>`<option value="${k}" ${t.type===k?'selected':''}>${v}</option>`).join('')}</select>
+  <label for="f-place">Sted</label><input id="f-place" value="${esc(t.place)}">
+  <div class="row"><div class="grow"><label for="f-from">Fra</label><input type="date" id="f-from" value="${t.from||''}"></div><div class="grow"><label for="f-to">Til</label><input type="date" id="f-to" value="${t.to||t.from||''}"></div></div>
+  <label for="f-team">Hold</label><input id="f-team" value="${esc(t.team||'')}" placeholder="F.eks. U11 piger">`,()=>{
+    const name=val('f-name');if(!name){$('f-name').focus();return false}
+    const d={name,type:val('f-type'),place:val('f-place'),from:val('f-from'),to:val('f-to')||val('f-from'),team:val('f-team')};
+    if(n){const nt=put({id:uid(),kind:'tour',player:'',...d});view={v:'tour',t:nt.id}}else put({...t,...d})});
+}
+function newClubRec(name){return put({id:uid(),kind:'club',name,logo:'',color:COLORS[all('club').length%COLORS.length]})}
+function matchForm(t,m){
+  const n=!m;m=m||{opp:'',when:(t.from||new Date().toISOString().slice(0,10))+'T09:00',field:''};
+  const opts=all('club').filter(c=>c.id!==ownId()).sort((a,b)=>a.name.localeCompare(b.name,'da'));
+  openSheet(`<h3>${n?'Tilføj kamp':'Ret kamp'}</h3>
+  <label for="f-opp">Modstander</label><select id="f-opp">${opts.map(c=>`<option value="${c.id}" ${m.opp===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}<option value="__new">+ Ny klub…</option></select>
+  <div id="newc" style="display:none"><label for="f-newc">Ny klubs navn</label><input id="f-newc"></div>
+  <label for="f-when">Dato og tid</label><input type="datetime-local" id="f-when" value="${m.when||''}">
+  <label for="f-field">Bane</label><input id="f-field" value="${esc(m.field||'')}" placeholder="F.eks. Bane 3">`,()=>{
+    let opp=val('f-opp');
+    if(opp==='__new'){const nm=val('f-newc');if(!nm){$('f-newc').focus();return false}opp=newClubRec(nm).id}
+    const d={opp,when:val('f-when'),field:val('f-field')};
+    if(n)put({id:uid(),kind:'match',tour:t.id,status:'plan',start:null,by:'',...d});else put({...m,...d})});
+  const s=$('f-opp'),sh=()=>$('newc').style.display=s.value==='__new'?'block':'none';
+  s.addEventListener('change',sh);if(!opts.length)s.value='__new';sh();
+}
+function toLogo(src){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{
+  const s=128,cv=document.createElement('canvas');cv.width=cv.height=s;const x=cv.getContext('2d');const w=im.naturalWidth||s,h=im.naturalHeight||s,k=Math.min(s/w,s/h);
+  x.drawImage(im,(s-w*k)/2,(s-h*k)/2,w*k,h*k);try{res(cv.toDataURL('image/png'))}catch(e){rej(e)}};im.onerror=()=>rej(new Error('billede'));im.src=src})}
+function clubForm(c,ownDefault){
+  const n=!c;c=c||{name:'',logo:'',color:COLORS[all('club').length%COLORS.length]};let lg=c.logo;
+  const prev=()=>{$('lgprev').innerHTML=logo({...c,logo:lg,name:val('f-cname')||c.name})};
+  openSheet(`<h3>${n?'Ny klub':'Ret klub'}</h3>
+  <label for="f-cname">Navn</label><input id="f-cname" value="${esc(c.name)}">
+  <label>Logo</label>
+  <div class="row"><span id="lgprev">${logo(c)}</span><div class="grow"><input type="file" id="f-logo" accept="image/*" aria-label="Vælg billede"></div></div>
+  ${HA?`<label for="f-url">…eller link til logo / klubbens hjemmeside</label><div class="row"><input id="f-url" class="grow" style="width:auto;flex:1" inputmode="url" placeholder="https://"><button class="btn" id="hent">Hent</button></div><div id="lgerr" class="err"></div>`:''}
+  <button class="btn" id="rmlogo" style="margin-top:8px;${c.logo?'':'display:none'}">Fjern logo</button>
+  <label style="display:flex;gap:10px;align-items:center;margin-top:16px"><input type="checkbox" id="f-own" style="width:24px;min-height:24px" ${ownId()===c.id||ownDefault?'checked':''}> Det er vores klub</label>
+  ${!n&&c.id!==ownId()?'<button class="btn del" id="rmclub" style="margin-top:12px">Slet klub</button>':''}`,()=>{
+    const name=val('f-cname');if(!name){$('f-cname').focus();return false}
+    const saved=n?put({id:uid(),kind:'club',color:c.color,name,logo:lg}):put({...c,name,logo:lg});
+    if($('f-own').checked&&ownId()!==saved.id)put({...settings(),own:saved.id});});
+  $('f-logo').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>toLogo(r.result).then(d=>{lg=d;prev();$('rmlogo').style.display=''});r.readAsDataURL(f)});
+  if(HA)$('hent').onclick=async()=>{const u=val('f-url');if(!u)return $('f-url').focus();const b=$('hent');b.disabled=true;b.textContent='Henter …';$('lgerr').textContent='';
+    try{const r=await api('logo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u})});const j=await r.json();
+      if(!r.ok)throw new Error(j.message||'Kunne ikke hente');lg=await toLogo(j.data);prev();$('rmlogo').style.display=''}
+    catch(e){$('lgerr').textContent=e.message==='billede'?'Billedet kunne ikke vises':(e.login?'Ikke logget ind':e.message)}
+    finally{b.disabled=false;b.textContent='Hent'}};
+  $('rmlogo').onclick=()=>{lg='';prev();$('rmlogo').style.display='none'};
+  const rc=$('rmclub');if(rc)rc.onclick=()=>{if(all('match').some(m=>m.opp===c.id)){rc.textContent='Klubben bruges i kampe – kan ikke slettes';return}del(c.id);closeSheet()};
+}
+
+/* ---------- handlinger ---------- */
+app.addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+  if((view.v==='tour'||view.v==='match')&&lockOf(tour(view.t))&&!VIEW_OK.has(a)&&!['login','setname'].includes(a))return;
+  const t=tour(el.dataset.t||view.t),m=matchById(el.dataset.m||view.m);
+  const add=(type,side)=>{put({id:uid(),kind:'event',match:m.id,t:type,side,min:curMin(m),at:Date.now(),dev:DEV,by:ME});render();const b=$('bigscore');if(b&&type==='goal')b.classList.add('flash')};
+  switch(a){
+   case 'login':return startLogin();
+   case 'setname':{const n=val('f-me');if(!n)return $('f-me').focus();ME=n;LS.set('fb_me',n);return render()}
+   case 'sync':return needLogin?startLogin():sync();
+   case 'settings':return OWNER?settingsSheet():null;
+   case 'picture':return OWNER?pictureSheet(t):null;
+   case 'home':return go({v:'home'});
+   case 'clubs':return go({v:'clubs'});
+   case 'back':return go(view.v==='match'?{v:'tour',t:view.t}:{v:'home'});
+   case 'open-tour':return go({v:'tour',t:el.dataset.t});
+   case 'open-match':return go({v:'match',t:el.dataset.t,m:el.dataset.m});
+   case 'new-tour':return tourForm();
+   case 'edit-tour':return tourForm(t);
+   case 'del-tour':return ask(`Slet "${esc(t.name)}"?`,'Alle stævnets kampe, mål og kort bliver også slettet.','Ja, slet',()=>{for(const mm of matchesOf(t.id)){for(const ev of all('event').filter(x=>x.match===mm.id))del(ev.id);del(mm.id)}del(t.id);view={v:'home'}},1);
+   case 'new-match':return matchForm(t);
+   case 'edit-match':return matchForm(t,m);
+   case 'del-match':return ask('Slet denne kamp?','Kampens mål og kort bliver også slettet.','Ja, slet',()=>{for(const ev of all('event').filter(x=>x.match===m.id))del(ev.id);del(m.id);view={v:'tour',t:t.id}},1);
+   case 'start':case 'reopen':{
+     /* samme hold kan kun spille én kamp ad gangen */
+     const go2=()=>{put({...m,status:'live',by:ME,start:a==='start'?Date.now():m.start||Date.now()});render()};
+     const other=all('match').filter(y=>y.status==='live'&&y.id!==m.id).map(y=>({x:tour(y.tour),y})).find(o=>o.x&&(o.x.team||'')===(t.team||''));
+     if(!other)return go2();
+     if(other.y.by&&other.y.by!==ME)return ask(`${esc(other.y.by)} styrer en kamp for samme hold`,`${esc(club(other.y.opp).name)} (${esc(other.x.name)}) står som live. Bed ${esc(other.y.by)} om at slutte den først, eller overtag den.`,'Overtag og afslut den',()=>{put({...other.y,status:'slut',by:ME});go2()});
+     return ask('Der er allerede en kamp i gang',`Kampen mod ${esc(club(other.y.opp).name)} (${esc(other.x.name)}, kl. ${tFmt(other.y.when)}) står som live. Samme hold kan kun spille én kamp ad gangen.`,'Afslut den og start denne',()=>{put({...other.y,status:'slut'});go2()});
+   }
+   case 'end':put({...m,status:'slut'});return render();
+   case 'goal':return add('goal',el.dataset.s);
+   case 'card':return add(el.dataset.k,el.dataset.s);
+   case 'undo':{const ev=[...eventsOf(m.id)].sort((x,y)=>(x.at||0)-(y.at||0)).pop();if(ev)del(ev.id);return render()}
+   case 'del-ev':del(el.dataset.e);return render();
+   case 'ed-min':{const ev=S.records[el.dataset.e];return openSheet(`<h3>Ret kampminut</h3><label for="f-min">Minut</label><input id="f-min" type="number" inputmode="numeric" min="1" max="130" value="${ev.min||''}">`,()=>{const v=parseInt(val('f-min'));put({...ev,min:v>0?v:null})})}
+   case 'takeover':{const L=lockOf(tour(view.t));if(!L)return render();
+     return ask(`Overtag styringen fra ${esc(L.by)}?`,`Brug det fx hvis ${esc(L.by)}s telefon er løbet tør for strøm. ${esc(L.by)} kan derefter kun kigge med.`,'Overtag',()=>put({...L,by:ME}))}
+   case 'new-club':return clubForm(null,el.dataset.own==='1'||!ownId());
+   case 'edit-club':return clubForm(club(el.dataset.c));
+  }
+});
+setInterval(()=>{const m=matchById(view.m);const c=$('clock');if(view.v==='match'&&m&&m.status==='live'&&c)c.textContent=`${curMin(m)}. minut${m.by?' · '+m.by:''}${m.field?' · '+m.field:''}`},15000);
+
+(async()=>{
+  await handleLoginReturn();
+  render();
+  if(HA){if(!VIEWER)await whoAmI();sync()}
+  if('serviceWorker' in navigator&&HA&&!VIEWER&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+}
+
+</script>
+</body>
+</html>

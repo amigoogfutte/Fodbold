@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Kampdag – fodbold",
+        "description": "Holder styr på stævner, kampe, mål og kort. Data deles mellem alle brugere i Home Assistant. Appen findes i sidemenuen under Fodbold."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Kampdag er allerede sat op."
+    }
+  }
+}
