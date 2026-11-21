@@ -98,7 +98,7 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.0 */
+/* Kampdag v0.1.1 */
 {
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
@@ -235,10 +235,10 @@ window.addEventListener('online',()=>sync());
 let view={v:'home'};
 const app=$('app'),modal=$('modal'),sheet=$('sheet');
 function go(v){view=v;render();window.scrollTo(0,0)}
-function head(title,back){return`<header class="top"><div class="in">${back?`<button class="back" data-a="back" aria-label="Tilbage">‹</button>`:''}<h1>${title}</h1>${VIEWER?'<span class="scope">Følg med</span>':OWNER?`<button class="gear" data-a="settings" aria-label="Del link">${gearSvg}</button>`:''}</div></header>`}
+function head(title,back){return`<header class="top"><div class="in">${back?`<button class="back" data-a="back" aria-label="Tilbage">‹</button>`:''}<h1>${title}</h1>${VIEWER?'<span class="scope">Følg med</span>':''}<button class="gear" data-a="settings" aria-label="Vejledning og indstillinger">${gearSvg}</button></div></header>`}
 const lockOf=t=>!VIEWER&&t&&matchesOf(t.id).find(m=>m.status==='live'&&m.by&&m.by!==ME);
 /* delt link: fjern alle knapper der ændrer noget */
-const READ_OK=new Set(['back','home','clubs','sync','open-match','open-tour']);
+const READ_OK=new Set(['back','home','clubs','sync','open-match','open-tour','settings']);
 function applyViewer(){if(!VIEWER)return;app.querySelectorAll('[data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});app.querySelectorAll('[data-a]').forEach(b=>{if(!READ_OK.has(b.dataset.a))b.remove()});app.querySelectorAll('input').forEach(i=>i.disabled=true);app.querySelectorAll('.ctrl,.cardbtns').forEach(x=>x.remove());
   app.querySelectorAll('.list .item[data-a=edit-club]').forEach(x=>x.removeAttribute('data-a'))}
 const VIEW_OK=new Set(['back','home','clubs','settings','sync','open-match','open-tour','takeover']);
@@ -424,10 +424,34 @@ async function pictureSheet(t){
   };
   draw();
 }
+const HELP_VIEW=[
+ ['Hvad er det her?','Du følger stævner og kampe live via et link, du har fået. Du kan kun kigge med, ikke rette noget.'],
+ ['Stillingen','Siden opdaterer sig selv hvert par sekunder. Øverst på forsiden står kampen, der er i gang lige nu, eller den næste kamp.'],
+ ['Stævner og kampe','Tryk på et stævne for at se alle dets kampe og resultater. Tryk på en kamp for at se mål og kort med kampminut.'],
+ ['Gem på hjemmeskærmen','På iPhone: tryk Del i Safari og vælg "Føj til hjemmeskærm", så har du linket ved hånden.']];
+const HELP_USER=[
+ ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs.'],
+ ['Klubber og logoer','Under Klubber opretter du klubberne. Logoet kan vælges som et billede fra telefonen eller hentes ved at indsætte et link til billedet eller til klubbens hjemmeside. Sæt flueben ved "Det er vores klub" på jeres egen klub.'],
+ ['Under kampen','Tryk "Start kamp". Brug de store knapper "+ MÅL" og knapperne til gult og rødt kort for hvert hold. Kampminuttet gemmes automatisk. Tryk på minuttet ud for et mål, hvis det skal rettes, fx når et mål skrives ind bagefter. "Fortryd sidste" fjerner den seneste registrering.'],
+ ['Flere telefoner','Trykker to telefoner mål til samme hold inden for 10 sekunder, tæller det som ét mål. Flere mål fra den samme telefon tæller altid hver for sig.'],
+ ['Hvem styrer','Den, der starter en kamp, styrer stævnet live. De andre kan kun kigge med på det stævne, men kan godt styre et andet stævne. Er telefonen løbet tør for strøm, kan en anden trykke "Overtag". Samme hold kan kun have én kamp i gang ad gangen.'],
+ ['Turneringens spiller','Nederst på stævnet skriver du, hvem der fik pokalen.'],
+ ['Uden dækning','Alt gemmes på telefonen og sendes til Home Assistant, så snart der er forbindelse igen. Linjen nederst viser, om alt er sendt.']];
+const HELP_OWNER=[
+ ['Del med andre','Lav et link nedenfor og send det til fx familien. De kan følge med live uden at logge ind og kan ikke rette noget. "Lav nyt link" og "Stop deling" gør det gamle link ugyldigt.'],
+ ['Billede til Facebook','Inde på et stævne laver "Billede til Facebook" et billede af dagens kampe eller hele turneringen. Tryk "Del …" og vælg Facebook, eller gem billedet.']];
+const helpHtml=list=>list.map(([h,t])=>`<details style="border-bottom:1px solid var(--line);padding:10px 0"><summary style="font-weight:600;cursor:pointer;min-height:28px">${h}</summary><p style="margin:8px 0 2px">${t}</p></details>`).join('');
 let shareTok=null;
 const shareUrl=()=>shareTok?location.origin+'/fodbold-app/index.html?se='+shareTok:'';
 async function settingsSheet(load=true){
-  sheet.innerHTML=`<h3>Del med andre</h3>
+  if(!OWNER||VIEWER){
+    sheet.innerHTML=`<h3>Sådan bruges Kampdag</h3>${helpHtml(VIEWER?HELP_VIEW:HELP_USER)}
+    ${VIEWER?'':`<p class="mut" style="margin-top:14px">Logget ind som <b>${esc(ME)}</b>.</p>`}
+    <div class="row" style="margin-top:12px"><button class="btn pri grow" data-x="close">Luk</button></div>`;
+    modal.classList.add('open');sheet.onclick=e=>{if(e.target.closest('[data-x]'))closeSheet()};return;
+  }
+  sheet.innerHTML=`<h3>Sådan bruges Kampdag</h3>${helpHtml(HELP_USER.concat(HELP_OWNER))}
+  <h3 style="margin-top:22px">Del med andre</h3>
   <p class="mut" style="margin-top:0">Send et link til fx familien, så de kan følge stævner, kampe og stillingen live – uden at logge ind. De kan kun kigge, ikke rette noget.</p>
   ${shareTok?`<input id="sharelink" readonly value="${esc(shareUrl())}" style="font-size:14px">
    <div class="row" style="margin-top:10px"><button class="btn pri grow" data-x="copy">Kopiér link</button>${navigator.share?'<button class="btn pri grow" data-x="share">Del …</button>':''}</div>
@@ -435,7 +459,7 @@ async function settingsSheet(load=true){
    <div class="row" style="margin-top:6px"><button class="btn grow" data-x="new">Lav nyt link</button><button class="btn del grow" data-x="stop">Stop deling</button></div>
    <p class="mut">Nyt link eller stop deling gør det gamle link ugyldigt.</p>`
   :`<button class="btn pri" style="width:100%" data-x="new">${load?'Henter …':'Lav delelink'}</button><div id="sharemsg" class="err"></div>`}
-  <p class="mut" style="margin-top:16px">Logget ind som <b>${esc(ME)}</b>. Kun du kan se dette tandhjul.</p>
+  <p class="mut" style="margin-top:16px">Logget ind som <b>${esc(ME)}</b>. Deling og Facebook-billede er kun på din bruger.</p>
   <div class="row" style="margin-top:12px"><button class="btn grow" data-x="close">Luk</button></div>`;
   modal.classList.add('open');
   const msg=t=>{const m=$('sharemsg');if(m)m.textContent=t};
@@ -515,7 +539,7 @@ app.addEventListener('click',e=>{
    case 'login':return startLogin();
    case 'setname':{const n=val('f-me');if(!n)return $('f-me').focus();ME=n;LS.set('fb_me',n);return render()}
    case 'sync':return needLogin?startLogin():sync();
-   case 'settings':return OWNER?settingsSheet():null;
+   case 'settings':return settingsSheet();
    case 'picture':return OWNER?pictureSheet(t):null;
    case 'home':return go({v:'home'});
    case 'clubs':return go({v:'clubs'});
