@@ -101,9 +101,9 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.7 */
+/* Kampdag v0.1.8 */
 {
-const VERSION='0.1.7';
+const VERSION='0.1.8';
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -305,7 +305,7 @@ function renderHome(){
   <div class="tabs" style="margin-top:4px"><button class="tab ${tList==='done'?'':'on'}" data-a="tlist" data-l="up">Kommende stævner<span class="n">${upc.length}</span></button><button class="tab ${tList==='done'?'on':''}" data-a="tlist" data-l="done">Afsluttede stævner<span class="n">${done.length}</span></button></div>
   <div class="card list" style="padding:0">${sorted.length?sorted.map(t=>{const tm=matchesOf(t.id),r=record(tm);return yrHead(t)+`<div class="item" data-a="open-tour" data-t="${t.id}">
    <div class="grow"><div style="font-weight:600">${esc(t.name)}</div><div class="mut">${dateRange(t)}${t.place?' · '+esc(t.place):''} · ${tm.length} kampe</div>
-   <div style="margin-top:4px"><span class="chip ${t.type}">${typeTxt[t.type]||''}</span> ${t.team?`<span class="chip">${esc(t.team)}</span>`:''} ${t.player?`<span class="chip">🏆 ${esc(t.player)}</span>`:''}</div></div>
+   <div style="margin-top:4px">${t.single?'<span class="chip">⚽ Kamp</span> ':''}<span class="chip ${t.type}">${typeTxt[t.type]||''}</span> ${t.team?`<span class="chip">${esc(t.team)}</span>`:''} ${t.player?`<span class="chip">🏆 ${esc(t.player)}</span>`:''}</div></div>
    <div style="text-align:right"><div class="score" style="font-size:20px">${r.w}-${r.d}-${r.l}</div><div class="mut">V-U-T</div></div></div>`}).join(''):`<div class="empty">${tList==='done'?'Ingen afsluttede stævner endnu':'Ingen kommende stævner – tryk "+ Nyt stævne"'}</div>`}</div>
   ${syncLine()}</div>`;
 }
@@ -316,13 +316,13 @@ function renderTour(){
   app.innerHTML=head(esc(t.name),1)+`<div class="wrap">
   <div class="row" style="margin-top:14px"><span class="chip ${t.type}">${typeTxt[t.type]||''}</span><span class="mut">${dateRange(t)}${t.place?' · '+esc(t.place):''}${t.team?' · '+esc(t.team):''}</span></div>
   <div class="card stats"><div><b>${r.w}</b><span>Vundet</span></div><div><b>${r.d}</b><span>Uafgjort</span></div><div><b>${r.l}</b><span>Tabt</span></div><div><b>${r.f}-${r.a}</b><span>Mål</span></div></div>
-  <div class="row"><h2 class="grow">Kampe</h2><button class="btn pri" data-a="new-match">+ Tilføj kamp</button></div>
+  <div class="row"><h2 class="grow">${t.single?'Kampen':'Kampe'}</h2>${t.single&&ms.length?'':'<button class="btn pri" data-a="new-match">+ Tilføj kamp</button>'}</div>
   <div class="card list" style="padding:0">${ms.length?ms.map(m=>{const o=club(m.opp),[a,b]=score(m),day=(m.when||'').slice(0,10);
    const dh=t.type==='flere'&&day!==lastDay?`<div style="padding:8px 12px;font-weight:600;background:var(--bg)">${dFmt(day)}</div>`:'';lastDay=day;
    return dh+`<div class="item" data-a="open-match" data-t="${t.id}" data-m="${m.id}"><div style="width:44px;font:700 18px 'Barlow Condensed'">${tFmt(m.when)}</div>${logo(o)}
    <div class="grow"><div style="font-weight:600">${esc(o.name)}</div><div class="mut">${esc(m.field||'')}${m.status==='live'?' · <b style="color:var(--red)">LIVE</b>'+(m.by?' · '+esc(m.by):''):''}</div></div>
    <div class="score">${m.status==='plan'?'<span class="mut" style="font-size:15px">Ikke spillet</span>':a+'-'+b}</div></div>`}).join(''):'<div class="empty">Ingen kampe endnu – tilføj dem hjemmefra, eller når de kommer under stævnet</div>'}</div>
-  <h2>Turneringens spiller</h2>
+  <h2>${t.single?'Kampens spiller':'Turneringens spiller'}</h2>
   <div class="card mvp">${cup()}<div class="grow"><label for="mvp" style="margin-top:0">Hvem fik pokalen?</label><input id="mvp" value="${esc(t.player||'')}" placeholder="Navn"></div></div>
   ${OWNER&&!VIEWER&&ms.length?`<button class="btn pri" style="width:100%;margin-top:18px" data-a="picture">📷 Billede til Facebook</button>`:''}
   <div class="row" style="margin-top:12px"><button class="btn" data-a="edit-tour">Ret stævne</button><button class="btn del" data-a="del-tour">Slet stævne</button></div>
@@ -443,7 +443,7 @@ const HELP_VIEW=[
  ['Stævner og kampe','Vælg "Kommende stævner" eller "Afsluttede stævner". Tryk på et stævne for at se alle dets kampe og resultater. Tryk på en kamp for at se mål og kort med kampminut.'],
  ['Gem på hjemmeskærmen','På iPhone: tryk Del i Safari og vælg "Føj til hjemmeskærm", så har du linket ved hånden.']];
 const HELP_USER=[
- ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Forsiden har to knapper: "Kommende stævner" (det nærmeste først) og "Afsluttede stævner" (det nyeste først), delt op efter år. Samme hold kan ikke spille to stævner på samme tid.'],
+ ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Forsiden har to knapper: "Kommende stævner" (det nærmeste først) og "Afsluttede stævner" (det nyeste først), delt op efter år. Samme hold kan ikke spille to stævner på samme tid. Er det bare én kamp, så sæt flueben i "Kamp" og vælg modstanderen – så skrives navnet selv, fx "Kamp: Langeskov mod Dalum", og kampen bliver lagt ind.'],
  ['Klubber og logoer','Under Klubber opretter du klubberne. Logoet kan vælges som et billede fra telefonen eller hentes ved at indsætte et link til billedet eller til klubbens hjemmeside. Sæt flueben ved "Det er vores klub" på jeres egen klub.'],
  ['Under kampen','Tryk "Start kamp". Brug de store knapper "+ MÅL" og knapperne til gult og rødt kort for hvert hold. Kampminuttet gemmes automatisk. Tryk på minuttet ud for et mål, hvis det skal rettes, fx når et mål skrives ind bagefter. "Fortryd sidste" fjerner den seneste registrering.'],
  ['Flere telefoner','Trykker to telefoner mål til samme hold inden for 10 sekunder, tæller det som ét mål. Flere mål fra den samme telefon tæller altid hver for sig.'],
@@ -500,21 +500,55 @@ async function settingsSheet(load=true){
 }
 function tourForm(t){
   const n=!t;t=t||{name:'',type:'ude',place:'',from:new Date().toISOString().slice(0,10),to:'',team:''};
+  /* "Kamp": et stævne med kun én kamp. Navnet skrives selv: "Kamp: Vores klub mod Modstander" */
+  const m1=t.single?matchesOf(t.id).sort((a,b)=>(a.when||'').localeCompare(b.when||''))[0]:null;
+  const opts=all('club').filter(c=>c.id!==ownId()).sort((a,b)=>a.name.localeCompare(b.name,'da'));
+  const curOpp=t.opp||(m1&&m1.opp)||'',curTime=(m1&&tFmt(m1.when))||'10:00';
   openSheet(`<h3>${n?'Nyt stævne':'Ret stævne'}</h3>
+  <label style="display:flex;gap:10px;align-items:center;margin-top:10px;font-size:17px"><input type="checkbox" id="f-single" style="width:24px;min-height:24px" ${t.single?'checked':''}> Kamp (kun én kamp mod én modstander)</label>
+  <div id="single" style="display:none">
+   <label for="f-sopp">Modstander</label><select id="f-sopp"><option value="">Vælg modstander…</option>${opts.map(c=>`<option value="${c.id}" ${curOpp===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}<option value="__new">+ Ny klub…</option></select>
+   <div id="snewc" style="display:none"><label for="f-snewc">Ny klubs navn</label><input id="f-snewc"></div>
+  </div>
   <label for="f-name">Navn</label><input id="f-name" value="${esc(t.name)}" placeholder="F.eks. Vildbjerg Cup">
   <label for="f-type">Type</label><select id="f-type">${Object.entries(typeTxt).map(([k,v])=>`<option value="${k}" ${t.type===k?'selected':''}>${v}</option>`).join('')}</select>
   <label for="f-place">Sted</label><input id="f-place" value="${esc(t.place)}">
-  <div class="row"><div class="grow"><label for="f-from">Fra</label><input type="date" id="f-from" value="${t.from||''}"></div><div class="grow"><label for="f-to">Til</label><input type="date" id="f-to" value="${t.to||t.from||''}"></div></div>
+  <div class="row"><div class="grow"><label for="f-from" id="l-from">Fra</label><input type="date" id="f-from" value="${t.from||''}"></div><div class="grow" id="w-to"><label for="f-to">Til</label><input type="date" id="f-to" value="${t.to||t.from||''}"></div><div class="grow" id="w-time" style="display:none"><label for="f-time">Kl.</label><input type="time" id="f-time" value="${curTime}"></div></div>
   <label for="f-team">Hold</label><input id="f-team" value="${esc(t.team||'')}" placeholder="F.eks. U11 piger">
   <div id="f-err" class="err" role="alert"></div>`,()=>{
+    const single=$('f-single').checked;
+    let opp='';
+    if(single){opp=val('f-sopp');
+      if(opp==='__new'){const nm=val('f-snewc');if(!nm){$('f-snewc').focus();return false}opp=newClubRec(nm).id}
+      if(!opp){$('f-err').textContent='Vælg en modstander.';$('f-sopp').focus();return false}
+      if(!val('f-name')||autoName)$('f-name').value=kampName(opp)}
     const name=val('f-name');if(!name){$('f-name').focus();return false}
-    const d={name,type:val('f-type'),place:val('f-place'),from:val('f-from'),to:val('f-to')||val('f-from'),team:val('f-team')};
+    const d={name,type:val('f-type'),place:val('f-place'),from:val('f-from'),to:single?val('f-from'):(val('f-to')||val('f-from')),team:val('f-team'),single,opp:single?opp:''};
+    if(single&&d.type==='flere')d.type='ude';
     if(d.from&&d.to<d.from){$('f-err').textContent='"Til" kan ikke være før "Fra".';return false}
-    /* samme hold kan ikke spille to stævner på samme tid */
+    /* samme hold kan ikke spille to stævner på samme tid (en enkelt kamp tjekkes ikke – der kan være flere samme dag) */
     const norm=x=>String(x||'').trim().toLowerCase();
-    const clash=all('tour').find(o=>o.id!==t.id&&norm(o.team)===norm(d.team)&&o.from&&d.from&&o.from<=d.to&&d.from<=(o.to||o.from));
+    const clash=!single&&all('tour').find(o=>o.id!==t.id&&!o.single&&norm(o.team)===norm(d.team)&&o.from&&d.from&&o.from<=d.to&&d.from<=(o.to||o.from));
     if(clash){$('f-err').textContent=`${d.team?esc(d.team):'Holdet'} spiller allerede "${esc(clash.name)}" (${dateRange(clash)}). Samme hold kan ikke spille to stævner på samme tid – ret datoerne eller holdet.`;return false}
-    if(n){const nt=put({id:uid(),kind:'tour',player:'',...d});view={v:'tour',t:nt.id}}else put({...t,...d})});
+    const when=(d.from||new Date().toISOString().slice(0,10))+'T'+(val('f-time')||'10:00');
+    let tid=t.id;
+    if(n){tid=put({id:uid(),kind:'tour',player:'',...d}).id;view={v:'tour',t:tid}}else put({...t,...d});
+    if(single){const mm=matchesOf(tid).sort((a,b)=>(a.when||'').localeCompare(b.when||''))[0];
+      if(mm)put({...mm,opp,when:mm.status==='plan'?when:mm.when});
+      else put({id:uid(),kind:'match',tour:tid,opp,when,field:'',status:'plan',start:null,by:''})}
+  });
+  const own=club(ownId()),ownName=own.id?own.name:'Vores hold';
+  const kampName=opp=>{const o=club(opp);return`Kamp: ${ownName} mod ${o.id?o.name:(val('f-snewc')||'?')}`};
+  let autoName=!t.name||/^Kamp:/.test(t.name);
+  const cb=$('f-single'),so=$('f-sopp'),nm=$('f-name');
+  nm.addEventListener('input',()=>{autoName=!nm.value.trim()});
+  const fill=()=>{if(cb.checked&&autoName&&so.value&&so.value!=='__new')nm.value=kampName(so.value);if(cb.checked&&autoName&&so.value==='__new'&&val('f-snewc'))nm.value=`Kamp: ${ownName} mod ${val('f-snewc')}`};
+  const sh=()=>{const on=cb.checked;$('single').style.display=on?'block':'none';$('w-to').style.display=on?'none':'';$('w-time').style.display=on?'':'none';
+    $('l-from').textContent=on?'Dato':'Fra';$('snewc').style.display=on&&so.value==='__new'?'block':'none';
+    $('f-type').querySelector('option[value=flere]').hidden=on;if(on&&$('f-type').value==='flere')$('f-type').value='ude';
+    nm.placeholder=on?'Skrives selv, når du vælger modstander':'F.eks. Vildbjerg Cup';fill()};
+  cb.addEventListener('change',()=>{if(cb.checked&&!nm.value.trim())autoName=true;sh()});
+  so.addEventListener('change',sh);$('f-snewc').addEventListener('input',fill);sh();
 }
 function newClubRec(name){return put({id:uid(),kind:'club',name,logo:'',color:COLORS[all('club').length%COLORS.length]})}
 function matchForm(t,m){
