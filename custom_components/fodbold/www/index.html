@@ -98,7 +98,7 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.1 */
+/* Kampdag v0.1.2 */
 {
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
@@ -110,6 +110,7 @@ let ME=LS.get('fb_me','');
 /* ?se=<kode>: delt link – kun kigge med, uden login */
 const VIEWER=new URLSearchParams(location.search).get('se')||'';
 let OWNER=LS.get('fb_owner',false);
+let BASE=LS.get('fb_base','');   /* adressen udefra (Home Assistant Cloud), så delte links virker for andre */
 const dbKey=()=>VIEWER?'fb_db_se':'fb_db';
 const emptyDb=()=>({records:{},dirty:[],since:0});
 let S=LS.get(dbKey(),null)||emptyDb();
@@ -190,7 +191,7 @@ async function api(path,opts={},retried){
   if(r.status===401){authSet(null);const e=new Error('login');e.login=true;throw e}
   return r;
 }
-async function whoAmI(){try{const r=await api('mig');if(r.ok){const j=await r.json();const ow=!!j.ejer;if((j.navn&&j.navn!==ME)||ow!==OWNER){ME=j.navn||ME;OWNER=ow;LS.set('fb_me',ME);LS.set('fb_owner',ow);softRender()}return true}}catch(e){if(e.login){needLogin=true;render()}}return false}
+async function whoAmI(){try{const r=await api('mig');if(r.ok){const j=await r.json();const ow=!!j.ejer;if(j.url){BASE=j.url.replace(/\/$/,'');LS.set('fb_base',BASE)}if((j.navn&&j.navn!==ME)||ow!==OWNER){ME=j.navn||ME;OWNER=ow;LS.set('fb_me',ME);LS.set('fb_owner',ow);softRender()}return true}}catch(e){if(e.login){needLogin=true;render()}}return false}
 let needLogin=false;
 
 /* ---------- synkronisering ---------- */
@@ -438,11 +439,14 @@ const HELP_USER=[
  ['Turneringens spiller','Nederst på stævnet skriver du, hvem der fik pokalen.'],
  ['Uden dækning','Alt gemmes på telefonen og sendes til Home Assistant, så snart der er forbindelse igen. Linjen nederst viser, om alt er sendt.']];
 const HELP_OWNER=[
+ ['Link til appen','Send app-linket nedenfor til dem, der har en bruger i Home Assistant. De logger ind med deres egen bruger og kan registrere mål, kort og kampe.'],
  ['Del med andre','Lav et link nedenfor og send det til fx familien. De kan følge med live uden at logge ind og kan ikke rette noget. "Lav nyt link" og "Stop deling" gør det gamle link ugyldigt.'],
  ['Billede til Facebook','Inde på et stævne laver "Billede til Facebook" et billede af dagens kampe eller hele turneringen. Tryk "Del …" og vælg Facebook, eller gem billedet.']];
 const helpHtml=list=>list.map(([h,t])=>`<details style="border-bottom:1px solid var(--line);padding:10px 0"><summary style="font-weight:600;cursor:pointer;min-height:28px">${h}</summary><p style="margin:8px 0 2px">${t}</p></details>`).join('');
 let shareTok=null;
-const shareUrl=()=>shareTok?location.origin+'/fodbold-app/index.html?se='+shareTok:'';
+const baseUrl=()=>BASE||location.origin;
+const shareUrl=()=>shareTok?baseUrl()+'/fodbold-app/index.html?se='+shareTok:'';
+const appUrl=()=>baseUrl()+'/kampdag';
 async function settingsSheet(load=true){
   if(!OWNER||VIEWER){
     sheet.innerHTML=`<h3>Sådan bruges Kampdag</h3>${helpHtml(VIEWER?HELP_VIEW:HELP_USER)}
@@ -451,7 +455,12 @@ async function settingsSheet(load=true){
     modal.classList.add('open');sheet.onclick=e=>{if(e.target.closest('[data-x]'))closeSheet()};return;
   }
   sheet.innerHTML=`<h3>Sådan bruges Kampdag</h3>${helpHtml(HELP_USER.concat(HELP_OWNER))}
-  <h3 style="margin-top:22px">Del med andre</h3>
+  <h3 style="margin-top:22px">Link til appen</h3>
+  <p class="mut" style="margin-top:0">Til dem med en bruger i Home Assistant. De logger ind og kan registrere.</p>
+  <input id="applink" readonly value="${esc(appUrl())}" style="font-size:14px">
+  <div class="row" style="margin-top:10px"><button class="btn pri grow" data-x="copyapp">Kopiér link</button>${navigator.share?'<button class="btn pri grow" data-x="shareapp">Del …</button>':''}</div>
+  <div id="appmsg" class="mut" style="min-height:22px;margin-top:6px"></div>
+  <h3 style="margin-top:18px">Del med andre (kun kigge)</h3>
   <p class="mut" style="margin-top:0">Send et link til fx familien, så de kan følge stævner, kampe og stillingen live – uden at logge ind. De kan kun kigge, ikke rette noget.</p>
   ${shareTok?`<input id="sharelink" readonly value="${esc(shareUrl())}" style="font-size:14px">
    <div class="row" style="margin-top:10px"><button class="btn pri grow" data-x="copy">Kopiér link</button>${navigator.share?'<button class="btn pri grow" data-x="share">Del …</button>':''}</div>
@@ -468,6 +477,8 @@ async function settingsSheet(load=true){
     switch(x.dataset.x){
       case 'copy':try{await navigator.clipboard.writeText(shareUrl());msg('Linket er kopieret')}catch(err){$('sharelink').select();msg('Markér og kopiér linket')}return;
       case 'share':try{await navigator.share({title:'Kampdag',text:'Følg kampene her:',url:shareUrl()})}catch(err){}return;
+      case 'copyapp':try{await navigator.clipboard.writeText(appUrl());$('appmsg').textContent='Linket er kopieret'}catch(err){$('applink').select();$('appmsg').textContent='Markér og kopiér linket'}return;
+      case 'shareapp':try{await navigator.share({title:'Kampdag',text:'Log ind med din Home Assistant-bruger her:',url:appUrl()})}catch(err){}return;
       case 'new':return call('POST');
       case 'stop':return call('DELETE');
       default:closeSheet();

@@ -9,7 +9,7 @@ App til at holde styr på stævner, kampe, mål og kort. Den kører i Home Assis
 - **Én styrer pr. stævne:** Den, der starter kampen, styrer stævnet live. De andre kan kun kigge med, indtil kampen er slut, eller indtil de trykker "Overtag". Samme hold kan kun have én kamp i gang ad gangen.
 - **Turneringens spiller** (pokal) kan skrives på hvert stævne.
 - **Vejledning:** Alle har et ⚙️ øverst til højre med en vejledning, der passer til det, de har adgang til.
-- **Kun for ejeren** af Home Assistant: lav et delelink, så andre kan følge med uden at logge ind (kun læse). Ejeren kan også lave et billede af dagens kampe eller hele turneringen, klar til Facebook.
+- **Kun for ejeren** af Home Assistant: et app-link til dem med en Home Assistant-bruger (de logger ind og kan registrere), og lav et delelink, så andre kan følge med uden at logge ind (kun læse). Ejeren kan også lave et billede af dagens kampe eller hele turneringen, klar til Facebook.
 - Appen virker uden dækning. Ændringer gemmes på telefonen og sendes, når der er forbindelse igen.
 
 ## Installation

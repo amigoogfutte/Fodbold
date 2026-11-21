@@ -123,9 +123,19 @@ class MigView(HomeAssistantView):
     name = "api:fodbold:mig"
     requires_auth = True
 
+    def __init__(self, hass: HomeAssistant) -> None:
+        self.hass = hass
+
     async def get(self, request: web.Request) -> web.Response:
+        from homeassistant.helpers.network import NoURLAvailableError, get_url
+
         u = request["hass_user"]
-        return self.json({"id": u.id, "navn": u.name, "ejer": bool(u.is_owner)})
+        hass = self.hass
+        try:
+            ude = get_url(hass, allow_internal=False, prefer_cloud=True)
+        except NoURLAvailableError:
+            ude = None
+        return self.json({"id": u.id, "navn": u.name, "ejer": bool(u.is_owner), "url": ude})
 
 
 class DelView(HomeAssistantView):
@@ -294,7 +304,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not data.get("http_registered"):
         # HTTP-ruter kan ikke fjernes igen, så de registreres kun én gang pr. opstart.
         await hass.http.async_register_static_paths([StaticPathConfig(APP_URL, str(WWW), False)])
-        for view in (SyncView(hass, store), MigView(), DelView(hass, deling), SeView(hass, store, deling),
+        for view in (SyncView(hass, store), MigView(hass), DelView(hass, deling), SeView(hass, store, deling),
                      LogoView(hass), AppRedirectView()):
             hass.http.register_view(view)
         data["http_registered"] = True
