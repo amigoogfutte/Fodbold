@@ -101,9 +101,9 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.8 */
+/* Kampdag v0.1.9 */
 {
-const VERSION='0.1.8';
+const VERSION='0.1.9';
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -311,10 +311,14 @@ function renderHome(){
 }
 function renderTour(){
   const t=tour(view.t);if(!t)return go({v:'home'});
-  const ms=matchesOf(t.id).sort((a,b)=>(a.when||'').localeCompare(b.when||'')),r=record(ms);
+  const ms=matchesOf(t.id).sort((a,b)=>(a.when||'').localeCompare(b.when||''));
+  const yr=(t.from||(ms[0]&&ms[0].when)||new Date().toISOString()).slice(0,4),nrm=x=>String(x||'').trim().toLowerCase();
+  /* enkelt kamp: tæl hele årets kampe for samme hold (også stævner). Stævne: kun stævnets egne kampe. */
+  const r=t.single?record(all('match').filter(m=>{const o=tour(m.tour);return o&&nrm(o.team)===nrm(t.team)&&((m.when||o.from||'').slice(0,4)===yr)})):record(ms);
   let lastDay='';
   app.innerHTML=head(esc(t.name),1)+`<div class="wrap">
   <div class="row" style="margin-top:14px"><span class="chip ${t.type}">${typeTxt[t.type]||''}</span><span class="mut">${dateRange(t)}${t.place?' · '+esc(t.place):''}${t.team?' · '+esc(t.team):''}</span></div>
+  ${t.single?`<h2 style="margin-bottom:0">Året ${yr}${t.team?' · '+esc(t.team):''}</h2><p class="mut" style="margin:2px 0 0">Alle kampe i ${yr} – både enkelte kampe og stævner</p>`:''}
   <div class="card stats"><div><b>${r.w}</b><span>Vundet</span></div><div><b>${r.d}</b><span>Uafgjort</span></div><div><b>${r.l}</b><span>Tabt</span></div><div><b>${r.f}-${r.a}</b><span>Mål</span></div></div>
   <div class="row"><h2 class="grow">${t.single?'Kampen':'Kampe'}</h2>${t.single&&ms.length?'':'<button class="btn pri" data-a="new-match">+ Tilføj kamp</button>'}</div>
   <div class="card list" style="padding:0">${ms.length?ms.map(m=>{const o=club(m.opp),[a,b]=score(m),day=(m.when||'').slice(0,10);
@@ -443,7 +447,7 @@ const HELP_VIEW=[
  ['Stævner og kampe','Vælg "Kommende stævner" eller "Afsluttede stævner". Tryk på et stævne for at se alle dets kampe og resultater. Tryk på en kamp for at se mål og kort med kampminut.'],
  ['Gem på hjemmeskærmen','På iPhone: tryk Del i Safari og vælg "Føj til hjemmeskærm", så har du linket ved hånden.']];
 const HELP_USER=[
- ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Forsiden har to knapper: "Kommende stævner" (det nærmeste først) og "Afsluttede stævner" (det nyeste først), delt op efter år. Samme hold kan ikke spille to stævner på samme tid. Er det bare én kamp, så sæt flueben i "Kamp" og vælg modstanderen – så skrives navnet selv, fx "Kamp: Langeskov mod Dalum", og kampen bliver lagt ind.'],
+ ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Forsiden har to knapper: "Kommende stævner" (det nærmeste først) og "Afsluttede stævner" (det nyeste først), delt op efter år. Samme hold kan ikke spille to stævner på samme tid. Er det bare én kamp, så sæt flueben i "Kamp" og vælg modstanderen – så skrives navnet selv, fx "Kamp: Langeskov mod Dalum", og kampen bliver lagt ind med bane eller hal. Inde på en kamp viser tallene hele årets kampe for holdet – også stævnerne. Inde på et stævne tæller kun stævnets egne kampe.'],
  ['Klubber og logoer','Under Klubber opretter du klubberne. Logoet kan vælges som et billede fra telefonen eller hentes ved at indsætte et link til billedet eller til klubbens hjemmeside. Sæt flueben ved "Det er vores klub" på jeres egen klub.'],
  ['Under kampen','Tryk "Start kamp". Brug de store knapper "+ MÅL" og knapperne til gult og rødt kort for hvert hold. Kampminuttet gemmes automatisk. Tryk på minuttet ud for et mål, hvis det skal rettes, fx når et mål skrives ind bagefter. "Fortryd sidste" fjerner den seneste registrering.'],
  ['Flere telefoner','Trykker to telefoner mål til samme hold inden for 10 sekunder, tæller det som ét mål. Flere mål fra den samme telefon tæller altid hver for sig.'],
@@ -509,6 +513,7 @@ function tourForm(t){
   <div id="single" style="display:none">
    <label for="f-sopp">Modstander</label><select id="f-sopp"><option value="">Vælg modstander…</option>${opts.map(c=>`<option value="${c.id}" ${curOpp===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}<option value="__new">+ Ny klub…</option></select>
    <div id="snewc" style="display:none"><label for="f-snewc">Ny klubs navn</label><input id="f-snewc"></div>
+   <label for="f-sfield" id="l-sfield">${t.type==='inde'?'Hal':'Bane'}</label><input id="f-sfield" value="${esc((m1&&m1.field)||'')}" placeholder="${t.type==='inde'?'F.eks. Hal 2':'F.eks. Bane 3'}">
   </div>
   <label for="f-name">Navn</label><input id="f-name" value="${esc(t.name)}" placeholder="F.eks. Vildbjerg Cup">
   <label for="f-type">Type</label><select id="f-type">${Object.entries(typeTxt).map(([k,v])=>`<option value="${k}" ${t.type===k?'selected':''}>${v}</option>`).join('')}</select>
@@ -534,8 +539,9 @@ function tourForm(t){
     let tid=t.id;
     if(n){tid=put({id:uid(),kind:'tour',player:'',...d}).id;view={v:'tour',t:tid}}else put({...t,...d});
     if(single){const mm=matchesOf(tid).sort((a,b)=>(a.when||'').localeCompare(b.when||''))[0];
-      if(mm)put({...mm,opp,when:mm.status==='plan'?when:mm.when});
-      else put({id:uid(),kind:'match',tour:tid,opp,when,field:'',status:'plan',start:null,by:''})}
+      const field=val('f-sfield');
+      if(mm)put({...mm,opp,field,when:mm.status==='plan'?when:mm.when});
+      else put({id:uid(),kind:'match',tour:tid,opp,when,field,status:'plan',start:null,by:''})}
   });
   const own=club(ownId()),ownName=own.id?own.name:'Vores hold';
   const kampName=opp=>{const o=club(opp);return`Kamp: ${ownName} mod ${o.id?o.name:(val('f-snewc')||'?')}`};
@@ -548,7 +554,8 @@ function tourForm(t){
     $('f-type').querySelector('option[value=flere]').hidden=on;if(on&&$('f-type').value==='flere')$('f-type').value='ude';
     nm.placeholder=on?'Skrives selv, når du vælger modstander':'F.eks. Vildbjerg Cup';fill()};
   cb.addEventListener('change',()=>{if(cb.checked&&!nm.value.trim())autoName=true;sh()});
-  so.addEventListener('change',sh);$('f-snewc').addEventListener('input',fill);sh();
+  so.addEventListener('change',sh);
+  $('f-type').addEventListener('change',()=>{const i=$('f-type').value==='inde';$('l-sfield').textContent=i?'Hal':'Bane';$('f-sfield').placeholder=i?'F.eks. Hal 2':'F.eks. Bane 3'});$('f-snewc').addEventListener('input',fill);sh();
 }
 function newClubRec(name){return put({id:uid(),kind:'club',name,logo:'',color:COLORS[all('club').length%COLORS.length]})}
 function matchForm(t,m){
