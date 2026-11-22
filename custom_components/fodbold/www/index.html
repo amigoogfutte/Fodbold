@@ -23,7 +23,7 @@
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Barlow,system-ui,sans-serif;overflow-x:clip;-webkit-tap-highlight-color:transparent}
-button,input,select{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 .wrap{max-width:720px;margin:0 auto;padding:0 max(4vw,14px) 96px}
 header.top{padding-top:max(18px,env(safe-area-inset-top));background:repeating-linear-gradient(90deg,var(--pitch) 0 56px,var(--pitch2) 56px 112px);color:var(--chalk);padding:18px max(4vw,14px) 22px}
 header.top .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
@@ -44,7 +44,7 @@ h2{font:700 24px/1.1 'Barlow Condensed',sans-serif;margin:26px 0 10px}
 .btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:600;cursor:pointer}
 .btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
 .btn.del{color:var(--red)}
-.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--yel);outline-offset:2px}
+.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--yel);outline-offset:2px}
 .list .item{display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--line);cursor:pointer;min-height:60px}
 .list .item:last-child{border:0}
 .logo{width:40px;height:40px;border-radius:10px;flex:none;object-fit:contain;background:#fff;display:grid;place-items:center;font:700 15px 'Barlow Condensed';color:#fff}
@@ -70,7 +70,7 @@ h2{font:700 24px/1.1 'Barlow Condensed',sans-serif;margin:26px 0 10px}
 .tl .x{margin-left:auto;border:0;background:none;color:var(--mut);font-size:20px;width:44px;height:44px;cursor:pointer}
 .mvp{display:flex;gap:12px;align-items:center}
 .mvp svg{flex:none}
-input,select{width:100%;min-height:46px;font-size:16px;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg)}
+input,select,textarea{width:100%;min-height:46px;font-size:16px;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg)}
 label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;text-align:center}
 .stats b{display:block;font:800 30px/1 'Barlow Condensed'}
@@ -94,6 +94,7 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 .opt.on{border-color:var(--acc);background:light-dark(#e4f3e9,#173825)}
 .opt b{display:block;font-size:17px}
 .err{color:var(--red);font-size:14px;margin-top:6px}
+textarea{resize:vertical;line-height:1.45}
 @media(min-width:600px){#modal{align-items:center}#modal .sheet{border-radius:20px}}
 </style>
 </head>
@@ -101,9 +102,9 @@ label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
 <div id="app"></div>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <script>
-/* Kampdag v0.1.12 */
+/* Kampdag v0.1.13 */
 {
-const VERSION='0.1.12';
+const VERSION='0.1.13';
 const HA=location.pathname.startsWith('/fodbold-app/');
 const $=id=>document.getElementById(id);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -171,6 +172,15 @@ const dFmt=s=>s?new Date(s.length===10?s+'T12:00':s).toLocaleDateString('da-DK',
 const tFmt=s=>s&&s.includes('T')?s.slice(11,16):'';
 const dateRange=t=>t.from===t.to||!t.to?dFmt(t.from):dFmt(t.from)+' – '+dFmt(t.to);
 function record(ms){let w=0,d=0,l=0,f=0,a=0;for(const m of ms){if(m.status==='plan')continue;const[x,y]=score(m);f+=x;a+=y;x>y?w++:x<y?l++:d++}return{w,d,l,f,a}}
+/* resultat på oversigten: en kamp viser stillingen, et stævne det samlede målresultat for alle spillede kampe */
+function resultCell(t,tm,r){
+  const played=tm.filter(m=>m.status!=='plan');
+  if(!played.length)return`<div style="text-align:right"><div class="mut" style="font-size:15px">Ikke spillet</div></div>`;
+  const live=played.some(m=>m.status==='live'),res=r.f>r.a?'V':r.f<r.a?'T':'U';
+  const col=res==='V'?'#1fb35f':res==='T'?'var(--red)':'var(--mut)';
+  const sub=t.single?(live?'<b style="color:var(--red)">LIVE</b>':({V:'Vundet',U:'Uafgjort',T:'Tabt'})[res]):`${live?'<b style="color:var(--red)">LIVE</b> · ':''}${r.w}V ${r.d}U ${r.l}T`;
+  return`<div style="text-align:right;flex:none"><div class="score" style="font-size:26px;line-height:1.1;${t.single&&!live?'color:'+col:''}">${r.f}-${r.a}</div><div class="mut" style="font-size:13px;white-space:nowrap">${sub}</div></div>`;
+}
 const curMin=m=>m.start?Math.max(1,Math.floor((Date.now()-m.start)/60000)+1):null;
 const cup=(s=44)=>`<svg width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6h20v12a10 10 0 0 1-20 0z" fill="#ffd21f"/><path d="M14 9H7v4a7 7 0 0 0 7 7M34 9h7v4a7 7 0 0 1-7 7" fill="none" stroke="#e0b000" stroke-width="3"/><rect x="21" y="27" width="6" height="8" fill="#e0b000"/><rect x="14" y="35" width="20" height="6" rx="2" fill="#8a6a00"/><path d="M18 9h3v10h-3z" fill="#fff" opacity=".45"/></svg>`;
 const cardIcon=t=>`<span class="kc ${t==='red'?'r':'y'}"></span>`;
@@ -243,7 +253,7 @@ async function sync(){
 function scheduleSync(ms){if(!HA)return;clearTimeout(syncTimer);syncTimer=setTimeout(sync,ms)}
 /* tegn kun igen når man ikke er midt i at skrive noget */
 let pendingRender=false;
-function softRender(){const a=document.activeElement;if(modal.classList.contains('open')||(a&&(a.tagName==='INPUT'||a.tagName==='SELECT'))){pendingRender=true;return}render()}
+function softRender(){const a=document.activeElement;if(modal.classList.contains('open')||(a&&(a.tagName==='INPUT'||a.tagName==='SELECT'||a.tagName==='TEXTAREA'))){pendingRender=true;return}render()}
 document.addEventListener('focusout',()=>setTimeout(()=>{if(pendingRender&&!modal.classList.contains('open')){pendingRender=false;render()}},50));
 setInterval(()=>{if(HA&&!document.hidden&&!needLogin&&syncState!=='dead')sync()},VIEWER?6000:4000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
@@ -258,13 +268,13 @@ function head(title,back){return`<header class="top"><div class="in">${back?`<bu
 const lockOf=t=>!VIEWER&&t&&matchesOf(t.id).find(m=>m.status==='live'&&m.by&&m.by!==ME);
 /* delt link: fjern alle knapper der ændrer noget */
 const READ_OK=new Set(['back','home','tlist','clubs','sync','open-match','open-tour','settings']);
-function applyViewer(){if(!VIEWER)return;app.querySelectorAll('.list .item[data-a=edit-club],.list .item[data-a=edit-team]').forEach(x=>x.removeAttribute('data-a'));app.querySelectorAll('[data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});app.querySelectorAll('[data-a]').forEach(b=>{if(!READ_OK.has(b.dataset.a))b.remove()});app.querySelectorAll('input').forEach(i=>i.disabled=true);app.querySelectorAll('.ctrl,.cardbtns').forEach(x=>x.remove())}
+function applyViewer(){if(!VIEWER)return;app.querySelectorAll('.list .item[data-a=edit-club],.list .item[data-a=edit-team]').forEach(x=>x.removeAttribute('data-a'));app.querySelectorAll('[data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});app.querySelectorAll('[data-a]').forEach(b=>{if(!READ_OK.has(b.dataset.a))b.remove()});app.querySelectorAll('input,textarea').forEach(i=>i.disabled=true);app.querySelectorAll('.ctrl,.cardbtns').forEach(x=>x.remove())}
 const VIEW_OK=new Set(['back','home','tlist','clubs','settings','sync','open-match','open-tour','takeover']);
 function applyLock(t){
   const L=lockOf(t);if(!L)return;
   app.querySelectorAll('.wrap [data-a=ed-min]').forEach(b=>{b.removeAttribute('data-a');b.disabled=true});
   app.querySelectorAll('.wrap [data-a]').forEach(b=>{if(!VIEW_OK.has(b.dataset.a))b.remove()});
-  app.querySelectorAll('.wrap input').forEach(i=>i.disabled=true);
+  app.querySelectorAll('.wrap input,.wrap textarea').forEach(i=>i.disabled=true);
   app.querySelectorAll('.ctrl,.cardbtns').forEach(x=>x.remove());
   app.querySelector('.wrap').insertAdjacentHTML('afterbegin',`<div class="lock"><div><b>Kampen styres live af ${esc(L.by)}</b><br>Du kan kun kigge med på dette stævne – du kan godt styre et andet stævne.</div><button class="btn" data-a="takeover">Overtag</button></div>`);
 }
@@ -318,7 +328,7 @@ function renderHome(){
   <div class="card list" style="padding:0">${sorted.length?sorted.map(t=>{const tm=matchesOf(t.id),r=record(tm);return yrHead(t)+`<div class="item" data-a="open-tour" data-t="${t.id}">
    <div class="grow"><div style="font-weight:600">${esc(t.name)}</div><div class="mut">${dateRange(t)}${t.place?' · '+esc(t.place):''} · ${tm.length} kampe</div>
    <div style="margin-top:4px">${t.single?'<span class="chip">⚽ Kamp</span> ':''}<span class="chip ${t.type}">${typeTxt[t.type]||''}</span> ${t.team?`<span class="chip">${esc(t.team)}</span>`:''} ${t.player?`<span class="chip">🏆 ${esc(t.player)}</span>`:''}</div></div>
-   <div style="text-align:right"><div class="score" style="font-size:20px">${r.w}-${r.d}-${r.l}</div><div class="mut">V-U-T</div></div></div>`}).join(''):`<div class="empty">${tList==='done'?'Ingen afsluttede stævner endnu':'Ingen kommende stævner – tryk "+ Nyt stævne"'}</div>`}</div>
+   ${resultCell(t,tm,r)}</div>`}).join(''):`<div class="empty">${tList==='done'?'Ingen afsluttede stævner endnu':'Ingen kommende stævner – tryk "+ Nyt stævne"'}</div>`}</div>
   ${syncLine()}</div>`;
 }
 function renderTour(){
@@ -340,10 +350,13 @@ function renderTour(){
    <div class="score">${m.status==='plan'?'<span class="mut" style="font-size:15px">Ikke spillet</span>':a+'-'+b}</div></div>`}).join(''):'<div class="empty">Ingen kampe endnu – tilføj dem hjemmefra, eller når de kommer under stævnet</div>'}</div>
   <h2>${t.single?'Kampens spiller':'Turneringens spiller'}</h2>
   <div class="card mvp">${cup()}<div class="grow"><label for="mvp" style="margin-top:0">Hvem fik pokalen?</label><input id="mvp" value="${esc(t.player||'')}" placeholder="Navn"></div></div>
+  <h2>Noter</h2>
+  <div class="card"><label for="notes" class="mut" style="margin-top:0;font-weight:500">${t.single?'Noter til kampen':'Noter til stævnet'}</label><textarea id="notes" rows="4" placeholder="F.eks. vejret, hvem der scorede, eller hvad der skal huskes til næste gang">${esc(t.notes||'')}</textarea></div>
   ${OWNER&&!VIEWER&&ms.length?`<button class="btn pri" style="width:100%;margin-top:18px" data-a="picture">📷 Billede til Facebook</button>`:''}
   <div class="row" style="margin-top:12px"><button class="btn" data-a="edit-tour">Ret stævne</button><button class="btn del" data-a="del-tour">Slet stævne</button></div>
   ${syncLine()}</div>`;
   $('mvp').addEventListener('change',e=>{const tt=tour(view.t);if(tt)put({...tt,player:e.target.value.trim()})});
+  $('notes').addEventListener('change',e=>{const tt=tour(view.t),v=e.target.value.replace(/\s+$/,'');if(tt&&(tt.notes||'')!==v)put({...tt,notes:v})});
 }
 function renderMatch(){
   const t=tour(view.t),m=matchById(view.m);if(!t||!m)return go(t?{v:'tour',t:t.id}:{v:'home'});
@@ -458,15 +471,15 @@ async function pictureSheet(t){
 const HELP_VIEW=[
  ['Hvad er det her?','Du følger stævner og kampe live via et link, du har fået. Du kan kun kigge med, ikke rette noget.'],
  ['Stillingen','Siden opdaterer sig selv hvert par sekunder. Øverst på forsiden står kampen, der er i gang lige nu, eller den næste kamp.'],
- ['Stævner og kampe','Vælg "Kommende stævner" eller "Afsluttede stævner". Tryk på et stævne for at se alle dets kampe og resultater. Tryk på en kamp for at se mål og kort med kampminut.'],
+ ['Stævner og kampe','Vælg "Kommende stævner" eller "Afsluttede stævner". Ud for hver kamp står resultatet, og ud for hvert stævne det samlede resultat (alle mål for og imod) og antal vundne, uafgjorte og tabte. Tryk på et stævne for at se alle dets kampe, resultater og noter. Tryk på en kamp for at se mål og kort med kampminut.'],
  ['Gem på hjemmeskærmen','På iPhone: tryk Del i Safari og vælg "Føj til hjemmeskærm", så har du linket ved hånden.']];
 const HELP_USER=[
- ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Forsiden har to knapper: "Kommende stævner" (det nærmeste først) og "Afsluttede stævner" (det nyeste først), delt op efter år. Samme hold kan ikke spille to stævner på samme tid. Er det bare én kamp, så sæt flueben i "Kamp" og vælg modstanderen – så skrives navnet selv, fx "Kamp: Langeskov mod Dalum", og kampen bliver lagt ind med bane eller hal. Inde på en kamp viser tallene hele årets kampe for holdet – også stævnerne. Inde på et stævne tæller kun stævnets egne kampe.'],
+ ['Stævner','Tryk "+ Nyt stævne". Vælg udendørs, indendørs eller flere dage, og skriv hvilket hold det er (fx U11 piger). Kampe kan lægges ind hjemmefra, og flere kan tilføjes undervejs. Forsiden har to knapper: "Kommende stævner" (det nærmeste først) og "Afsluttede stævner" (det nyeste først), delt op efter år. Ud for en kamp står resultatet, og ud for et stævne det samlede resultat (alle mål for og imod) og V/U/T. Samme hold kan ikke spille to stævner på samme tid. Er det bare én kamp, så sæt flueben i "Kamp" og vælg modstanderen – så skrives navnet selv, fx "Kamp: Langeskov mod Dalum", og kampen bliver lagt ind med bane eller hal. Inde på en kamp viser tallene hele årets kampe for holdet – også stævnerne. Inde på et stævne tæller kun stævnets egne kampe.'],
  ['Hold og klubber','Under "Hold og klubber" opretter du jeres egne hold (fx U11 piger) og de andre klubber. Når du laver et stævne eller en kamp, vælger du bare holdet på listen. Holdene rykker selv en årgang op ved årsskiftet (U12 piger bliver U13 piger), men gamle stævner beholder det navn, holdet havde dengang. Klubberne opretter du også her. Logoet kan vælges som et billede fra telefonen eller hentes ved at indsætte et link til billedet eller til klubbens hjemmeside. Sæt flueben ved "Det er vores klub" på jeres egen klub.'],
  ['Under kampen','Tryk "Start kamp". Brug de store knapper "+ MÅL" og knapperne til gult og rødt kort for hvert hold. Kampminuttet gemmes automatisk. Tryk på minuttet ud for et mål, hvis det skal rettes, fx når et mål skrives ind bagefter. "Fortryd sidste" fjerner den seneste registrering.'],
  ['Flere telefoner','Trykker to telefoner mål til samme hold inden for 10 sekunder, tæller det som ét mål. Flere mål fra den samme telefon tæller altid hver for sig.'],
  ['Hvem styrer','Den, der starter en kamp, styrer stævnet live. De andre kan kun kigge med på det stævne, men kan godt styre et andet stævne. Er telefonen løbet tør for strøm, kan en anden trykke "Overtag". Samme hold kan kun have én kamp i gang ad gangen.'],
- ['Turneringens spiller','Nederst på stævnet skriver du, hvem der fik pokalen.'],
+ ['Turneringens spiller og noter','Nederst på stævnet skriver du, hvem der fik pokalen. Under den er feltet "Noter", hvor I kan skrive alt det andet – fx vejret, hvem der scorede eller hvad der skal huskes til næste gang.'],
  ['Slet stævne','Tryk to gange hurtigt på "Slet stævne", og bekræft derefter. Så slettes stævnet med alle dets kampe, mål og kort.'],
  ['Uden dækning','Alt gemmes på telefonen og sendes til Home Assistant, så snart der er forbindelse igen. Linjen nederst viser, om alt er sendt.']];
 const HELP_OWNER=[
